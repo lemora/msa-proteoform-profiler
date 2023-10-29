@@ -9,15 +9,31 @@
 We use python 3.11 and [poetry](https://github.com/python-poetry/poetry) 1.6.1.
 All package versions are managed by poetry. It is advised to create a virtual environment:
 ```
-poetry env use python3
+poetry env use /full/path/to/python
 poetry env info
 ```
 
-### Testing
+### Running/Testing
 
-Activate the viurtual environment with `poetry shell`, then:
+Activate the virtual environment, then prepare by installing:
 ```
+poetry shell
 poetry install
+```
+
+**Running**:
+```
+poetry run msapp [options] <msa file>
+# OR, when in venv + installed:
+msapp [options] <msa file>
+```
+
+**Testing**:
+```
 poetry run pytest
 ```
-Exit the venv with `poetry exit`.
+
+Exit the venv:
+```
+poetry exit
+```

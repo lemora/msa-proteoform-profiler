@@ -9,7 +9,11 @@ packages = [{include = "msapp", from = "src"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 pytest = "^7.4.3"
+argparse = "^1.4.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+msapp = "msapp.cli:run"

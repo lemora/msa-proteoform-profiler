@@ -7,9 +7,13 @@ readme = "README.md"
 packages = [{include = "msapp", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.13"
 pytest = "^7.4.3"
 argparse = "^1.4.0"
+pysam = "^0.22.0"
+numpy = "^1.26.1"
+opencv-python = "^4.8.1.78"
+matplotlib = "^3.8.0"
 
 [build-system]
 requires = ["poetry-core"]

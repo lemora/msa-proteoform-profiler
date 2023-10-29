@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "msapp"
+version = "0.1.0"
+description = "msa proteoform profiler"
+authors = ["Yong Feng", "Lea Morschel"]
+readme = "README.md"
+packages = [{include = "msapp", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pytest = "^7.4.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

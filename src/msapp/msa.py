@@ -2,8 +2,8 @@ import copy
 import numpy as np
 from pysam import FastaFile, FastxFile
 
-from msapp.visualize import show
-from msapp.imgmagic import blur, dilate_erode
+from msapp.visualize import show, imgsave
+from msapp.imgmagic import blur, dilate_erode, gaussian_blur
 
 
 class MultiSeqAlignment():
@@ -19,6 +19,7 @@ class MultiSeqAlignment():
     self.ncols = np.max(msa.lengths)
     if np.min(msa.lengths) != self.ncols:
       raise ValueError("ERR: The MSA contains sequences of different lengths!")
+    msa.close()
 
     self._to_binary_matrix()
 
@@ -35,6 +36,7 @@ class MultiSeqAlignment():
         for j, letter in enumerate(row.sequence):
           if letter.isalpha():
             msa_mat[i, j] = 0 # black, aligned position
+      fh.close()
     self._msa_mat = msa_mat
 
 
@@ -62,12 +64,16 @@ class MultiSeqAlignment():
     count_ones = sum([sum(array) for array in msa_mat_filtered])
 
 
-  def blur(self, show=False):
-    self._msa_mat_filtered = blur(self._msa_mat_filtered, show)
+  ############### image processing
 
+  def blur(self, ksize=9, show=False):
+    self._msa_mat_filtered = blur(self._msa_mat_filtered, ksize, show)
 
-  def dilate_erode(self, show=False):
-    self._msa_mat_filtered = dilate_erode(self._msa_mat_filtered, show)
+  def gaussian_blur(self, ksize=5, show=False):
+    self._msa_mat_filtered = gaussian_blur(self._msa_mat_filtered, ksize, show)
+
+  def dilate_erode(self, ksize=5, show=False):
+    self._msa_mat_filtered = dilate_erode(self._msa_mat_filtered, ksize, show)
 
 
   ############### helper/debug
@@ -83,6 +89,7 @@ class MultiSeqAlignment():
         print(entry.quality)
         i += 1
         if i >= n: break
+      fh.close()
 
 
   def visualize(self):
@@ -91,6 +98,12 @@ class MultiSeqAlignment():
       show(self._msa_mat, "Original Alignment (Row: Sequence)")
     else:
       show(self._msa_mat_filtered, "Filtered Alignment (Row: Sequence)")
+
+  def save_to_file(self, filename):
+    """Saves the final alignment image as well as the identified proteoform positions."""
+    imgsave(self._msa_mat_filtered, filename)
+    print(f"Wrote filtered alignment image to file out/{filename}.png")
+    # TODO: invent file format and save proteoforms + meta information
 
 
   ############### getter/setter

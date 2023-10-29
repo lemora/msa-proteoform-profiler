@@ -4,6 +4,9 @@ import numpy as np
 
 
 def show_pre_post(pre, post, title:str):
+  if pre.shape[1] > 3000:
+    print("Image is too large to show pre/post. Skipping.")
+    return
   plt.subplot(121), plt.imshow(pre, cmap="gray"), plt.title(f'Before ({pre.shape[0]} rows, {pre.shape[1]} cols)')
   plt.xticks([]), plt.yticks([])
   plt.subplot(122), plt.imshow(post, cmap="gray"), plt.title(f'After ({post.shape[0]} rows, {post.shape[1]} cols)')
@@ -35,7 +38,7 @@ def show_as_one(mat, title: str):
 def show_as_subimages(mat, title: str):
   """Shows the alignmet as a binary image split over several rows."""
   binary_image = np.array(mat, dtype=np.uint8) * 255
-  
+
   # Split the image into equal columns
   splits = 3
   height, width = binary_image.shape
@@ -64,3 +67,11 @@ def show_as_subimages(mat, title: str):
   mng = plt.get_current_fig_manager()
   mng.resize(*mng.window.maxsize())
   plt.show()
+
+
+def imgsave(img, filename="proteoform-img"):
+  fig, ax = plt.subplots(nrows=1, ncols=1)
+  plt.imshow(img, cmap="gray")
+  plt.xticks([]), plt.yticks([])
+  fig.savefig(f"out/{filename}.png", bbox_inches='tight')
+  plt.close(fig)

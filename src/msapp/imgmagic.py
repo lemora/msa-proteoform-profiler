@@ -1,19 +1,25 @@
-import cv2 as cv
+import cv2
 from matplotlib import pyplot as plt
 import numpy as np
 
 from msapp.visualize import show_pre_post
 
-def blur(bimg, show=False):
-  blur = cv.blur(bimg, (9, 9))
-  if show: show_pre_post(bimg, blur, "Blurring")
+def blur(bimg, ksize=9, show=False):
+  blur = cv2.blur(bimg, (ksize, ksize))
+  if show: show_pre_post(bimg, blur, f"Blurring, kernel size={ksize}")
   return to_binary_matrix(blur)
 
 
-def dilate_erode(bimg, show=False):
-  kernel = np.ones((5, 5), np.uint8)
-  morphed = cv.morphologyEx(bimg, cv.MORPH_OPEN, kernel)
-  if show: show_pre_post(bimg, morphed, "Morphing (Dilate, then Erode)")
+def gaussian_blur(bimg, ksize=5, show=False):
+  blur = cv2.GaussianBlur(bimg, (ksize, ksize), cv2.BORDER_DEFAULT)
+  if show: show_pre_post(bimg, blur, f"Gaussian Blur, kernel size={ksize}")
+  return to_binary_matrix(blur)
+
+
+def dilate_erode(bimg, ksize=5, show=False):
+  kernel = np.ones((ksize, ksize), np.uint8)
+  morphed = cv2.morphologyEx(bimg, cv2.MORPH_OPEN, kernel)
+  if show: show_pre_post(bimg, morphed, f"Morphing (Dilate, then Erode), kernel size={ksize}")
   return to_binary_matrix(morphed)
 
 

@@ -12,6 +12,8 @@ def parse_command_line(argv) -> argparse.ArgumentParser:
                  help='enable verbose mode')
   p.add_argument('-d', '--display', action='store_true', default=False,
                  help='displays the visualized results')
+  p.add_argument('-s', '--save', action='store_true', default=False,
+                 help='saves the results at the end')
   p.add_argument('-r', '--reference', type=int, default=0,
                  help='maps the general msa to the sequence with this index in the msa as a first step')
   args = p.parse_args(argv)
@@ -31,7 +33,12 @@ def run():
   msa.filter_by_reference(p.reference) # 500?
   if p.display: msa.visualize()
 
-  msa.dilate_erode(show=p.display)
-  msa.blur(show=p.display)
+  # image processing pipeline to detect regions of interest
+  msa.dilate_erode(ksize=3, show=p.display)
+  msa.gaussian_blur(ksize=3, show=p.display)
+  # msa.blur(ksize=3, show=p.display)
+  # msa.dilate_erode(ksize=3, show=p.display)
+
+  if p.save: msa.save_to_file("proteoform-img")
 
 

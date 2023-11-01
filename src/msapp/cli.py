@@ -1,6 +1,7 @@
 import argparse
 import sys
 
+import msapp.gconst as gc
 from msapp.msa import MultiSeqAlignment
 
 def parse_command_line(argv) -> argparse.ArgumentParser:
@@ -24,20 +25,20 @@ def run():
   print("Welcome to the msa proteoform profiler")
   argv = sys.argv[1:]
   p = parse_command_line(argv)
-  if p.verbose: print("Finished parsing command line arguments")
+  gc.DISPLAY = p.display
+  gc.VERBOSE = p.verbose
+  if gc.VERBOSE:
+    print("Finished parsing command line arguments")
+    print(f"verbose:{gc.VERBOSE}; display:{gc.DISPLAY}")
 
   msa: MultiSeqAlignment = MultiSeqAlignment(p.msafile)
-  if p.verbose: msa.print_msa(1)
-  if p.display: msa.visualize()
-
-  msa.filter_by_reference(p.reference) # 500?
-  if p.display: msa.visualize()
 
   # image processing pipeline to detect regions of interest
-  msa.dilate_erode(ksize=3, show=p.display)
-  msa.gaussian_blur(ksize=3, show=p.display)
-  # msa.blur(ksize=3, show=p.display)
-  # msa.dilate_erode(ksize=3, show=p.display)
+
+  msa.gaussian_blur(ksize=9)
+  msa.dilate_erode(ksize=3)
+
+  msa.filter_by_reference(p.reference)  # 500?
 
   if p.save: msa.save_to_file("proteoform-img")
 

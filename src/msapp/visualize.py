@@ -2,10 +2,12 @@ import cv2
 from matplotlib import pyplot as plt
 import numpy as np
 
+import msapp.gconst as gc
 
-def show_pre_post(pre, post, title:str):
+def show_pre_post(pre, post, title: str):
   if pre.shape[1] > 3000:
-    print("Image is too large to show pre/post. Skipping.")
+    if gc.VERBOSE: print("INFO: Image is too large to show pre/post. Just showing post version.")
+    show_as_subimages(post, title)
     return
   plt.subplot(121), plt.imshow(pre, cmap="gray"), plt.title(f'Before ({pre.shape[0]} rows, {pre.shape[1]} cols)')
   plt.xticks([]), plt.yticks([])

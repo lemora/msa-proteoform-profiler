@@ -2,8 +2,9 @@ import copy
 import numpy as np
 from pysam import FastaFile, FastxFile
 
-from msapp.visualize import show, imgsave
+import msapp.gconst as gc
 from msapp.imgmagic import blur, dilate_erode, gaussian_blur
+from msapp.visualize import show, imgsave
 
 
 class MultiSeqAlignment():
@@ -27,6 +28,9 @@ class MultiSeqAlignment():
     self._msa_mat_filtered = None
     print(f"Successfully loaded MSA ({self.nrows} sequences of size {self.ncols})")
 
+    if gc.VERBOSE: self.print_msa(1)
+    if gc.DISPLAY: self.visualize()
+
 
   def _to_binary_matrix(self):
     """Creates a binary matrix from the alignment, where white (1) is a gap and black (0) an aligned position."""
@@ -44,13 +48,18 @@ class MultiSeqAlignment():
 
   def filter_by_reference(self, reference_idx, force=False):
     """Filters the alignment matrix by a given row in that MSA."""
-    if self._msa_mat_filtered is not None:
+    if self._msa_mat_filtered.shape[1] != self.ncols:
       if not force:
         print("WARN: There is already a filtered version. Use force to override")
         return
       else:
         print("INFO: Forcefully overriding stored filtered version")
 
+    if reference_idx >= self.nrows:
+      print(f"ERR: Reference index {reference_idx} is too large. Aborting.")
+      return
+
+    print(f"OP: Filtering by reference with index {reference_idx}")
     self._refseq = reference_idx
     refseq = self._msa_mat[reference_idx]
     ones = np.sum([1 for i in refseq if i == 0])
@@ -62,18 +71,25 @@ class MultiSeqAlignment():
     self._removed_cols = removed_cols
 
     count_ones = sum([sum(array) for array in msa_mat_filtered])
+    if gc.DISPLAY: self.visualize()
 
 
   ############### image processing
 
-  def blur(self, ksize=9, show=False):
-    self._msa_mat_filtered = blur(self._msa_mat_filtered, ksize, show)
+  def blur(self, ksize=9):
+    print(f"OP: Blur ({ksize}x{ksize} kernel)")
+    mat = self.get_newest_msa_mat()
+    self._msa_mat_filtered = blur(mat, ksize)
 
-  def gaussian_blur(self, ksize=5, show=False):
-    self._msa_mat_filtered = gaussian_blur(self._msa_mat_filtered, ksize, show)
+  def gaussian_blur(self, ksize=5):
+    print(f"OP: Gaussian blur ({ksize}x{ksize} kernel)")
+    mat = self.get_newest_msa_mat()
+    self._msa_mat_filtered = gaussian_blur(mat, ksize)
 
-  def dilate_erode(self, ksize=5, show=False):
-    self._msa_mat_filtered = dilate_erode(self._msa_mat_filtered, ksize, show)
+  def dilate_erode(self, ksize=5):
+    print(f"OP: Dilate/erode ({ksize}x{ksize} kernel)")
+    mat = self.get_newest_msa_mat()
+    self._msa_mat_filtered = dilate_erode(mat, ksize)
 
 
   ############### helper/debug
@@ -113,3 +129,6 @@ class MultiSeqAlignment():
 
   def get_filtered_msa(self):
     return self._removed_cols, self._msa_mat_filtered
+
+  def get_newest_msa_mat(self):
+    return self._msa_mat if self._msa_mat_filtered is None else self._msa_mat_filtered

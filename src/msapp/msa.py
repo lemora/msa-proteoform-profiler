@@ -12,7 +12,6 @@ class MultiSeqAlignment():
 
   def __init__(self, filename):
     self._filename = filename
-    self._showsteps = False
 
     # preprocessing
     msa = FastaFile(filename)
@@ -48,7 +47,7 @@ class MultiSeqAlignment():
 
   def filter_by_reference(self, reference_idx, force=False):
     """Filters the alignment matrix by a given row in that MSA."""
-    if self._msa_mat_filtered.shape[1] != self.ncols:
+    if self._msa_mat_filtered is not None and self._msa_mat_filtered.shape[1] != self.ncols:
       if not force:
         print("WARN: There is already a filtered version. Use force to override")
         return

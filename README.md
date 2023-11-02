@@ -23,8 +23,7 @@ poetry install
 
 **Running**:
 ```
-poetry run msapp [options] <msa file>
-# OR, when in venv + installed:
+# when in venv + installed:
 msapp [options] <msa file>
 ```
 

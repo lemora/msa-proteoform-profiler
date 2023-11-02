@@ -35,8 +35,8 @@ def run():
 
   # image processing pipeline to detect regions of interest
 
-  msa.gaussian_blur(ksize=9)
   msa.dilate_erode(ksize=3)
+  msa.gaussian_blur(ksize=3)
 
   msa.filter_by_reference(p.reference)  # 500?
 

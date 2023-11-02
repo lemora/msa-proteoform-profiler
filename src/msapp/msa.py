@@ -76,16 +76,19 @@ class MultiSeqAlignment():
   ############### image processing
 
   def blur(self, ksize=9):
+    """Blur image."""
     print(f"OP: Blur ({ksize}x{ksize} kernel)")
     mat = self.get_newest_msa_mat()
     self._msa_mat_filtered = blur(mat, ksize)
 
   def gaussian_blur(self, ksize=5):
+    """Gaussian blur image."""
     print(f"OP: Gaussian blur ({ksize}x{ksize} kernel)")
     mat = self.get_newest_msa_mat()
     self._msa_mat_filtered = gaussian_blur(mat, ksize)
 
   def dilate_erode(self, ksize=5):
+    """Dilate, then erode image."""
     print(f"OP: Dilate/erode ({ksize}x{ksize} kernel)")
     mat = self.get_newest_msa_mat()
     self._msa_mat_filtered = dilate_erode(mat, ksize)

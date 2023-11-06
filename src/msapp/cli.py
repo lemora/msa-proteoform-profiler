@@ -36,12 +36,15 @@ def run():
 
   msa: MultiSeqAlignment = MultiSeqAlignment(p.msafile)
 
-  # --- image processing pipeline to detect regions of interest
+  # --- image processing to remove noise
+
+  sort_by = lambda row: sum(row)
+  if p.reorder:
+    msa.sort_by_metric(sorting_metric=sort_by)
 
   # filtering as an early step just for now in order to see results of img processing better
   msa.filter_by_reference(p.filter)
   if p.reorder:
-    sort_by = lambda row: sum(row)
     msa.sort_by_metric(sorting_metric=sort_by)
 
   msa.img_process(convolve, col_size=17, row_size=7)
@@ -50,6 +53,10 @@ def run():
   col_size = col_size if col_size % 2 == 1 else col_size + 1
   # filter with a large emphasis on columns
   msa.img_process(convolve, col_size=col_size, row_size=3)
+
+  # --- clustering
+
+  msa.cluster()
 
   if p.save: msa.save_to_file("proteoform-img")
 

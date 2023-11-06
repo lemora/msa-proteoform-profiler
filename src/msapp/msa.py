@@ -1,9 +1,12 @@
 import copy
 import numpy as np
 from pysam import FastaFile, FastxFile
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.spatial.distance import pdist
+
 
 import msapp.gconst as gc
-from msapp.visualize import show, imgsave
+from msapp.visualize import show, imgsave, visualize_clusters
 
 
 
@@ -94,11 +97,20 @@ class MultiSeqAlignment():
 
   ############### cluster operations, constructs implicit phylogenetic tree
 
-  def cluster(self, clusering_method):
+  def cluster(self):
     """Clusters a MSA by some method.
     The Result is a number of clusters and their assigned sequences? Or positions, to directly identify domains?
     """
-    print("Not yet implemented")
+    # TODO: work in progress...
+
+    mat = copy.deepcopy(self._get_curr_mat())
+
+    # Calculate similarity matrix
+    distance_matrix = pdist(mat, metric='hamming')
+    linkage_mat = linkage(distance_matrix, method='complete')
+    dendrogram(linkage_mat)
+
+    visualize_clusters(mat, linkage_mat)
     self._post_op()
 
 

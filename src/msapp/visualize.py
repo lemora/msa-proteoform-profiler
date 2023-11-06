@@ -1,6 +1,7 @@
 import cv2
 from matplotlib import pyplot as plt
 import numpy as np
+import seaborn as sns
 
 import msapp.gconst as gc
 
@@ -79,6 +80,16 @@ def show_as_subimages(mat, title: str):
   mng.resize(*mng.window.maxsize())
   plt.show()
 
+
+def visualize_clusters(mat, linkage_mat):
+    # Plot the original matrix with highlighted clusters in the form of a dendogram
+    sns.set(style="white")
+    sns.clustermap(mat, row_linkage=linkage_mat, col_cluster=False, method='complete')
+
+    plt.show()
+
+
+# ----------------- saving
 
 def imgsave(img, filename="proteoform-img"):
   fig, ax = plt.subplots(nrows=1, ncols=1)

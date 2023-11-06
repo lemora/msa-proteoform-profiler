@@ -9,13 +9,18 @@ def show_pre_post(pre, post, title: str):
     if gc.VERBOSE: print("INFO: Image is too large to show pre/post. Just showing post version.")
     show_as_subimages(post, title)
     return
-  plt.subplot(121), plt.imshow(pre, cmap="gray"), plt.title(f'Before ({pre.shape[0]} rows, {pre.shape[1]} cols)')
-  plt.xticks([]), plt.yticks([])
-  plt.subplot(122), plt.imshow(post, cmap="gray"), plt.title(f'After ({post.shape[0]} rows, {post.shape[1]} cols)')
-  plt.xticks([]), plt.yticks([])
+
+  plt.subplot(121), plt.imshow(pre, cmap="gray"), plt.title(f'Before [{pre.shape[0]}x{pre.shape[1]}]')
+  plt.xlabel("Position in aligned sequence")
+  plt.ylabel("Sequence number")
+
+  plt.subplot(122), plt.imshow(post, cmap="gray"), plt.title(f'After [{post.shape[0]}x{post.shape[1]}]')
+  plt.xlabel("Position in aligned sequence")
+  plt.ylabel("Sequence number")
+
   mng = plt.get_current_fig_manager()
   mng.resize(*mng.window.maxsize())
-  mng.window.title(f"{title} ({pre.shape[0]} rows, {pre.shape[1]} cols)")
+  plt.suptitle(f"{title}")
   plt.show()
 
 
@@ -27,11 +32,12 @@ def show(msa_mat, title: str):
 
 
 def show_as_one(mat, title: str):
-  """Shows the alignmet as a binary image."""
+  """Shows the alignment as a binary image."""
   img = np.array(mat, dtype=np.uint8) * 255
 
-  plt.subplot(), plt.imshow(img, cmap="gray"), plt.title(f"{title} ({mat.shape[0]} rows, {mat.shape[1]} cols)")
-  plt.xticks([]), plt.yticks([])
+  plt.subplot(), plt.imshow(img, cmap="gray"), plt.title(f"{title} [{mat.shape[0]}x{mat.shape[1]}]")
+  plt.xlabel("Position in aligned sequence")
+  plt.ylabel("Sequence number")
   mng = plt.get_current_fig_manager()
   mng.resize(*mng.window.maxsize())
   plt.show()
@@ -64,8 +70,11 @@ def show_as_subimages(mat, title: str):
   # scale down image: otherwise too large to properly display. mainly a cv2 problem
   # concat_img = cv2.resize(concat_img, (concat_img.shape[1] // 2, concat_img.shape[0] // 2))
 
-  plt.subplot(), plt.imshow(concat_img, cmap="gray"), plt.title(f"{title} ({mat.shape[0]} rows, {mat.shape[1]} cols)")
-  plt.xticks([]), plt.yticks([])
+  plt.subplot(), plt.imshow(concat_img, cmap="gray"), plt.title(f"{title} [{mat.shape[0]}x{mat.shape[1]}]")
+  # plt.xticks([])
+  plt.xlabel("Position in aligned sequence")
+  plt.ylabel("Sequence number")
+  
   mng = plt.get_current_fig_manager()
   mng.resize(*mng.window.maxsize())
   plt.show()

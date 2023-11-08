@@ -24,7 +24,7 @@ def parse_command_line(argv) -> argparse.ArgumentParser:
   return args
 
 
-def run():
+def run() -> None:
   print("Welcome to the msa proteoform profiler")
   argv = sys.argv[1:]
   p = parse_command_line(argv)

@@ -2,10 +2,12 @@ import cv2
 from matplotlib import pyplot as plt
 import numpy as np
 import seaborn as sns
+from scipy.cluster.hierarchy import dendrogram
+
 
 import msapp.gconst as gc
 
-def show_pre_post(pre, post, title: str):
+def show_pre_post(pre, post, title: str) -> None:
   if pre.shape[1] > 3000:
     if gc.VERBOSE: print("INFO: Image is too large to show pre/post. Just showing post version.")
     show_as_subimages(post, title)
@@ -25,14 +27,14 @@ def show_pre_post(pre, post, title: str):
   plt.show()
 
 
-def show(msa_mat, title: str):
+def show(msa_mat, title: str) -> None:
   if msa_mat.shape[1] > 3000:
     show_as_subimages(msa_mat, title)
   else:
     show_as_one(msa_mat, title)
 
 
-def show_as_one(mat, title: str):
+def show_as_one(mat, title: str) -> None:
   """Shows the alignment as a binary image."""
   img = np.array(mat, dtype=np.uint8) * 255
 
@@ -44,7 +46,7 @@ def show_as_one(mat, title: str):
   plt.show()
 
 
-def show_as_subimages(mat, title: str):
+def show_as_subimages(mat, title: str) -> None:
   """Shows the alignmet as a binary image split over several rows."""
   binary_image = np.array(mat, dtype=np.uint8) * 255
 
@@ -81,8 +83,10 @@ def show_as_subimages(mat, title: str):
   plt.show()
 
 
-def visualize_clusters(mat, linkage_mat):
-    # Plot the original matrix with highlighted clusters in the form of a dendogram
+def visualize_clusters(mat, linkage_mat) -> None:
+    """Plot the original matrix with highlighted clusters in the form of a dendrogram."""
+    dendrogram(linkage_mat)
+
     sns.set(style="white")
     sns.clustermap(mat, row_linkage=linkage_mat, col_cluster=False, method='complete')
 
@@ -91,7 +95,7 @@ def visualize_clusters(mat, linkage_mat):
 
 # ----------------- saving
 
-def imgsave(img, filename="proteoform-img"):
+def imgsave(img, filename="proteoform-img") -> None:
   fig, ax = plt.subplots(nrows=1, ncols=1)
   plt.imshow(img, cmap="gray")
   plt.xticks([]), plt.yticks([])

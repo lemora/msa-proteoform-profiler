@@ -1,9 +1,8 @@
 import copy
 import numpy as np
 from pysam import FastaFile, FastxFile
-from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.cluster.hierarchy import linkage
 from scipy.spatial.distance import pdist
-
 
 import msapp.gconst as gc
 from msapp.visualize import show, imgsave, visualize_clusters
@@ -37,7 +36,7 @@ class MultiSeqAlignment():
     self._post_op()
 
 
-  def _to_binary_matrix(self):
+  def _to_binary_matrix(self) -> None:
     """Creates a binary matrix from the alignment, where white (1) is a gap and black (0) an aligned position."""
     msa_mat = np.ones((self.nrows, self.ncols), dtype=np.uint8)
     with FastxFile(self._filename) as fh:
@@ -51,7 +50,7 @@ class MultiSeqAlignment():
 
   ############### filter operations
 
-  def filter_by_reference(self, idx, force=False):
+  def filter_by_reference(self, idx, force=False) -> None:
     """Filters the alignment matrix by a given row in that MSA."""
     if self.filtered:
       if not force:
@@ -82,7 +81,7 @@ class MultiSeqAlignment():
 
   ############### sort operations
 
-  def sort_by_metric(self, sorting_metric):
+  def sort_by_metric(self, sorting_metric) -> None:
     """Sorts a MSA binary matrix by the given function that works on a binary list."""
     print("OP: sort binary MSA rows")
     mat = copy.deepcopy(self._get_curr_mat())
@@ -95,9 +94,19 @@ class MultiSeqAlignment():
     self._post_op()
 
 
+  ############### image processing
+
+  def img_process(self, img_fun, *args, **kwargs) -> None:
+    """Process the alignment by passing the current alignment matrix/image into the given image processing function."""
+    # TODO: maybe create enum for all possible operations so as not to expose actual implementations to caller
+    mat = img_fun(img=self._get_curr_mat(), *args, **kwargs)
+    self._msa_mat_filtered = mat
+    self._post_op()
+
+
   ############### cluster operations, constructs implicit phylogenetic tree
 
-  def cluster(self):
+  def cluster(self) -> None:
     """Clusters a MSA by some method.
     The Result is a number of clusters and their assigned sequences? Or positions, to directly identify domains?
     """
@@ -108,25 +117,14 @@ class MultiSeqAlignment():
     # Calculate similarity matrix
     distance_matrix = pdist(mat, metric='hamming')
     linkage_mat = linkage(distance_matrix, method='complete')
-    dendrogram(linkage_mat)
 
     visualize_clusters(mat, linkage_mat)
     self._post_op()
 
 
-  ############### image processing
-
-  def img_process(self, img_fun, *args, **kwargs):
-    """Process the alignment by passing the current alignment matrix/image into the given image processing function."""
-    # TODO: maybe create enum for all possible operations so as not to expose actual implementations to caller
-    mat = img_fun(img=self._get_curr_mat(), *args, **kwargs)
-    self._msa_mat_filtered = mat
-    self._post_op()
-
-
   ############### analysis/metrics
 
-  def calc_average_row_transitions(self):
+  def calc_average_row_transitions(self) -> int:
     """Calculates the average number of value transitions per row as a metric for the noisiness of the MSA."""
     mat = self._get_curr_mat()
     assert mat.shape[0] == self.nrows and mat.shape[1] == self.ncols
@@ -143,7 +141,7 @@ class MultiSeqAlignment():
     return avg_row_transitions
 
 
-  def calc_average_col_transitions(self):
+  def calc_average_col_transitions(self) -> int:
     """Calculates the average number of value transitions per column as a metric for the noisiness of the MSA."""
     mat = self._get_curr_mat()
     assert mat.shape[0] == self.nrows and mat.shape[1] == self.ncols
@@ -160,7 +158,7 @@ class MultiSeqAlignment():
     return avg_col_transitions
 
 
-  def calc_cr_metric(self, verbose=None):
+  def calc_cr_metric(self, verbose=None) -> (int, int):
     rt = self.calc_average_row_transitions()
     ct = self.calc_average_col_transitions()
     prod = rt * ct
@@ -170,13 +168,14 @@ class MultiSeqAlignment():
     return rt, ct
 
 
-  def _post_op(self):
+  def _post_op(self) -> None:
     """Operations to perform at the end of an MSA processing step."""
-    self.calc_cr_metric(verbose=True)
+    if gc.VERBOSE: self.calc_cr_metric(verbose=True)
+
 
   ############### helper/debug
 
-  def print_msa(self, n):
+  def print_msa(self, n) -> None:
     if n < 1: return
     i = 0
     with FastxFile(self._filename) as fh:
@@ -190,7 +189,7 @@ class MultiSeqAlignment():
       fh.close()
 
 
-  def visualize(self):
+  def visualize(self) -> None:
     """Shows a binary image of the alignment."""
     if self._msa_mat_filtered is None:
       show(self._msa_mat, "Original Alignment (1 seq/row, white=gap)")
@@ -199,7 +198,7 @@ class MultiSeqAlignment():
       show(self._msa_mat_filtered, f"Filtered Alignment (1 seq/row, white=gap{aligned_str})")
 
 
-  def save_to_file(self, filename):
+  def save_to_file(self, filename) -> None:
     """Saves the final alignment image as well as the identified proteoform positions."""
     imgsave(self._msa_mat_filtered, filename)
     print(f"Wrote filtered alignment image to file out/{filename}.png")
@@ -208,5 +207,5 @@ class MultiSeqAlignment():
 
   ############### getter/setter
 
-  def _get_curr_mat(self):
+  def _get_curr_mat(self) -> np.mat:
     return self._msa_mat if self._msa_mat_filtered is None else self._msa_mat_filtered

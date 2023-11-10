@@ -3,7 +3,7 @@ import sys
 
 import msapp.gconst as gc
 from msapp.msa import MultiSeqAlignment
-from msapp.imgmagic import convolve, dilate_erode, gaussian_blur, median_blur
+from msapp.imgmagic import cross_convolve, dilate_erode, gaussian_blur, median_blur
 
 def parse_command_line(argv) -> argparse.ArgumentParser:
   """Process command line arguments."""
@@ -36,27 +36,30 @@ def run() -> None:
 
   msa: MultiSeqAlignment = MultiSeqAlignment(p.msafile)
 
-  # --- image processing to remove noise
+  # --- remove sequences that are much too long; > 3 sigmal
 
   sort_by = lambda row: sum(row)
-  if p.reorder:
-    msa.sort_by_metric(sorting_metric=sort_by)
+  msa.filter_by_length_statistic()
+
 
   # filtering as an early step just for now in order to see results of img processing better
-  msa.filter_by_reference(p.filter)
-  if p.reorder:
-    msa.sort_by_metric(sorting_metric=sort_by)
+  # msa.filter_by_reference(p.filter)
+  # if p.reorder: msa.sort_by_metric(sorting_metric=sort_by)
 
-  msa.img_process(convolve, col_size=17, row_size=7)
+  # --- image processing to remove noise
+
+  msa.img_process(cross_convolve, col_size=17, row_size=7)
 
   col_size = msa.nrows // 10
   col_size = col_size if col_size % 2 == 1 else col_size + 1
-  # filter with a large emphasis on columns
-  msa.img_process(convolve, col_size=col_size, row_size=3)
+  msa.img_process(cross_convolve, col_size=col_size, row_size=3)
+
+  # cleaning step
+  msa.remove_empty_cols(show=True)
 
   # --- clustering
 
-  msa.cluster()
+  msa.linkage_cluster()
 
   if p.save: msa.save_to_file("proteoform-img")
 

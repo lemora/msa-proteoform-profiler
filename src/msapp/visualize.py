@@ -1,11 +1,15 @@
 import cv2
 from matplotlib import pyplot as plt
 import numpy as np
+from scipy.cluster.hierarchy import dendrogram, fcluster
+from scipy.stats import mode
 import seaborn as sns
-from scipy.cluster.hierarchy import dendrogram
-
 
 import msapp.gconst as gc
+
+
+# ----------------- general plotting
+
 
 def show_pre_post(pre, post, title: str) -> None:
   if pre.shape[1] > 3000:
@@ -83,6 +87,57 @@ def show_as_subimages(mat, title: str) -> None:
   plt.show()
 
 
+# ----------------- clustering
+
+
+def hcluster(mat, linkage_mat):
+  """Perform hierarchical clustering"""
+
+  # Define the number of clusters you want to identify
+  n_clusters = 4
+
+  # Get the cluster labels for each row
+  cluster_labels = fcluster(linkage_mat, n_clusters, criterion='maxclust')
+
+  # Identify consensus sequences within each cluster
+  consensus_list = []
+  for i in range(1, n_clusters+1):
+    cluster_indices = np.where(cluster_labels == i)[0]
+    cluster_data = mat[cluster_indices]
+    # print(f"cluster {i} data:", cluster_data)
+    consensus_sequence = mode(cluster_data, axis=0).mode
+    consensus_list.append(list(consensus_sequence))
+
+  # Print consensus sequences
+  # for i, consensus in enumerate(consensus_list):
+  #   print(f"Cluster {i + 1} Consensus Sequence: {consensus}")
+
+  visualize_cluster_consensuses(consensus_list)
+
+
+def visualize_cluster_consensuses(consensus_sequences: list[list]):
+  """Shows the consensus of a number of sequence clusters based on similarity."""
+  sorted_cseqs = sorted(consensus_sequences, key=lambda x: x.count(1))
+
+  num_blocks = len(sorted_cseqs)
+  rows_per_block = 30
+
+  subimages = []
+  for cseq in sorted_cseqs:
+    for j in range(rows_per_block):
+      subimages.append(cseq)
+
+  concat_img = np.vstack(subimages)
+
+  plt.subplot(), plt.imshow(concat_img, cmap="gray"), plt.title(f"Consensuses of {num_blocks} sequence clusters")
+  plt.xlabel("Position in aligned sequence")
+  plt.ylabel("Sequence number")
+
+  mng = plt.get_current_fig_manager()
+  mng.resize(*mng.window.maxsize())
+  plt.show()
+
+
 def visualize_clusters(mat, linkage_mat) -> None:
     """Plot the original matrix with highlighted clusters in the form of a dendrogram."""
     dendrogram(linkage_mat)
@@ -91,6 +146,17 @@ def visualize_clusters(mat, linkage_mat) -> None:
     sns.clustermap(mat, row_linkage=linkage_mat, col_cluster=False, method='complete')
 
     plt.show()
+
+
+# ----------------- statistics
+
+def show_hist(counts: list, nbins: int = 50) -> None:
+  plt.subplot(), plt.title(f"Histogram of sequence lengths in the alignment")
+  plt.grid()
+  plt.hist(counts, bins = nbins, color="black")
+  plt.xlabel("Sequence length")
+  plt.ylabel("Count")
+  plt.show()
 
 
 # ----------------- saving

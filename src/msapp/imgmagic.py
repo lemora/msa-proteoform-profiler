@@ -48,7 +48,7 @@ def dilate_erode(img, ksize=5, show=None):
   return processed
 
 
-def convolve(img, row_size: int = 1, col_size: int = 3, show=None):
+def cross_convolve(img, row_size: int = 1, col_size: int = 3, show=None):
   """Convolves with a cross-shaped kernel with row_size ones on the center row and col_size 1s on the center column."""
   ksize = max(row_size, col_size)
   print(f"OP: Convonving with {ksize}x{ksize} cross-kernel (1s on row:{row_size}, on col:{col_size})")
@@ -71,7 +71,7 @@ def create_cross_kernel(row_size: int = 1, col_size: int = 3):
   if row_size % 2 == 0 or col_size % 2 == 0:
     raise ValueError("Kernel size must be an odd number.")
 
-  print(f"Row size: {row_size}, col size: {col_size}")
+  if gc.VERBOSE: print(f"Cross kernel with row size: {row_size}, col size: {col_size}")
   ksize = max(col_size, row_size)
   kernel = np.zeros((ksize, ksize), dtype=int)
 

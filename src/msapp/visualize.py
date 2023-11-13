@@ -1,7 +1,7 @@
 import cv2
 from matplotlib import pyplot as plt
 import numpy as np
-from scipy.cluster.hierarchy import dendrogram, fcluster
+from scipy.cluster.hierarchy import dendrogram
 from scipy.stats import mode
 import seaborn as sns
 
@@ -88,32 +88,6 @@ def show_as_subimages(mat, title: str) -> None:
 
 
 # ----------------- clustering
-
-
-def hcluster(mat, linkage_mat):
-  """Perform hierarchical clustering"""
-
-  # Define the number of clusters you want to identify
-  n_clusters = 4
-
-  # Get the cluster labels for each row
-  cluster_labels = fcluster(linkage_mat, n_clusters, criterion='maxclust')
-
-  # Identify consensus sequences within each cluster
-  consensus_list = []
-  for i in range(1, n_clusters+1):
-    cluster_indices = np.where(cluster_labels == i)[0]
-    cluster_data = mat[cluster_indices]
-    # print(f"cluster {i} data:", cluster_data)
-    consensus_sequence = mode(cluster_data, axis=0).mode
-    consensus_list.append(list(consensus_sequence))
-
-  # Print consensus sequences
-  # for i, consensus in enumerate(consensus_list):
-  #   print(f"Cluster {i + 1} Consensus Sequence: {consensus}")
-
-  visualize_cluster_consensuses(consensus_list)
-
 
 def visualize_cluster_consensuses(consensus_sequences: list[list]):
   """Shows the consensus of a number of sequence clusters based on similarity."""

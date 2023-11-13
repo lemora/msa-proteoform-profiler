@@ -7,9 +7,9 @@ import msapp.gconst as gc
 from msapp.visualize import show_pre_post
 
 
-def blur(img, ksize=9, show=None):
+def blur(img: np.array, ksize=9, show=None):
   """Blur image."""
-  print(f"OP: Blur ({ksize}x{ksize} kernel)")
+  print(f"\n-- OP: Blur ({ksize}x{ksize} kernel)")
   show = show if show is not None else gc.DISPLAY
   processed = cv2.blur(img, (ksize, ksize))
   processed = to_binary_matrix(processed)
@@ -17,9 +17,9 @@ def blur(img, ksize=9, show=None):
   return processed
 
 
-def gaussian_blur(img, ksize=5, show=None):
+def gaussian_blur(img: np.array, ksize=5, show=None):
   """Gaussian blur image."""
-  print(f"OP: Gaussian blur ({ksize}x{ksize} kernel)")
+  print(f"\n-- OP: Gaussian blur ({ksize}x{ksize} kernel)")
   show = show if show is not None else gc.DISPLAY
   processed = cv2.GaussianBlur(img, (ksize, ksize), cv2.BORDER_DEFAULT)
   processed = to_binary_matrix(processed)
@@ -27,9 +27,9 @@ def gaussian_blur(img, ksize=5, show=None):
   return processed
 
 
-def median_blur(img, ksize=5, show=None):
+def median_blur(img: np.array, ksize=5, show=None):
   """Median blur image."""
-  print(f"OP: Median blur ({ksize}x{ksize} kernel)")
+  print(f"\n-- OP: Median blur ({ksize}x{ksize} kernel)")
   show = show if show is not None else gc.DISPLAY
   processed = cv2.medianBlur(img, ksize)
   processed = to_binary_matrix(processed)
@@ -37,9 +37,9 @@ def median_blur(img, ksize=5, show=None):
   return processed
 
 
-def dilate_erode(img, ksize=5, show=None):
+def dilate_erode(img: np.array, ksize=5, show=None):
   """Dilate, then erode image."""
-  print(f"OP: Dilate/erode ({ksize}x{ksize} kernel)")
+  print(f"\n-- OP: Dilate/erode ({ksize}x{ksize} kernel)")
   show = show if show is not None else gc.DISPLAY
   kernel = np.ones((ksize, ksize), np.uint8)
   processed = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
@@ -48,17 +48,17 @@ def dilate_erode(img, ksize=5, show=None):
   return processed
 
 
-def cross_convolve(img, row_size: int = 1, col_size: int = 3, show=None):
+def cross_convolve(img: np.array, row_size: int = 1, col_size: int = 3, show=None):
   """Convolves with a cross-shaped kernel with row_size ones on the center row and col_size 1s on the center column."""
   ksize = max(row_size, col_size)
-  print(f"OP: Convonving with {ksize}x{ksize} cross-kernel (1s on row:{row_size}, on col:{col_size})")
+  print(f"\n-- OP: Convolving with {ksize}x{ksize} cross-kernel (r:{row_size}, c:{col_size})")
 
   kernel = create_cross_kernel(row_size=row_size, col_size=col_size)
   processed = cv2.filter2D(src=img, ddepth=-1, kernel=kernel)
   processed = to_binary_matrix(processed)
 
   if show if show is not None else gc.DISPLAY:
-    show_pre_post(img, processed, f"Convonving with {ksize}x{ksize} cross-kernel (1s on row:{row_size}, on col:{col_size})")
+    show_pre_post(img, processed, f"Convolving with {ksize}x{ksize} cross-kernel (1s on row:{row_size}, on col:{col_size})")
   return processed
 
 
@@ -94,7 +94,7 @@ def create_cross_kernel(row_size: int = 1, col_size: int = 3):
 
 ############### pre/post formatting
 
-def to_binary_matrix(img):
+def to_binary_matrix(img: np.array):
   """Makes sure that after image processing the contained values are binary again: 0 or 1."""
   mat = copy.deepcopy(img)
   minval = np.min(mat)

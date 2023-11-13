@@ -26,6 +26,7 @@ def parse_command_line(argv) -> argparse.ArgumentParser:
 
 def run() -> None:
   print("Welcome to the msa proteoform profiler")
+  print("------------------------------------------")
   argv = sys.argv[1:]
   p = parse_command_line(argv)
   gc.DISPLAY = p.display
@@ -36,11 +37,13 @@ def run() -> None:
 
   msa: MultiSeqAlignment = MultiSeqAlignment(p.msafile)
 
-  # --- remove sequences that are much too long; > 3 sigmal
+  # --- remove sequences that are much too long; > 3 sigma
 
   sort_by = lambda row: sum(row)
   msa.filter_by_length_statistic()
+  msa.remove_empty_cols(show=gc.DISPLAY)
 
+  # return
 
   # filtering as an early step just for now in order to see results of img processing better
   # msa.filter_by_reference(p.filter)
@@ -55,7 +58,7 @@ def run() -> None:
   msa.img_process(cross_convolve, col_size=col_size, row_size=3)
 
   # cleaning step
-  msa.remove_empty_cols(show=True)
+  msa.remove_empty_cols(show=gc.DISPLAY)
 
   # --- clustering
 

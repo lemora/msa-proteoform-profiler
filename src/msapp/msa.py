@@ -185,15 +185,22 @@ class MultiSeqAlignment():
     linkage_mat = linkage(distance_matrix, method=cmethod)
     if gc.DISPLAY: visualize_clusters(self._mat, linkage_mat)
 
-    self.calc_consensus_custers(linkage_mat, self.nclusters)
+    # self.calc_consensus_custers(linkage_mat, self.nclusters)
+    self.calc_consensus_custers(linkage_mat, dist_threshold=0.25)
     self._post_op()
 
 
-  def calc_consensus_custers(self, linkage_mat, nclusters: int = 3):
+  def calc_consensus_custers(self, linkage_mat: np.array, nclusters: int = -1, dist_threshold: float = 0.2):
     """Calculate clusters and a consensus sequence (average) per cluster."""
     mat = copy.deepcopy(self._mat)
-    cluster_labels = fcluster(linkage_mat, nclusters, criterion='maxclust')
+    if nclusters > 0:
+      cluster_labels = fcluster(linkage_mat, nclusters, criterion='maxclust')
+    else:
+      cluster_labels = fcluster(linkage_mat, dist_threshold, criterion='distance')
+      nclusters = len(set(cluster_labels))
+
     consensus_list = []
+    print(nclusters)
     for i in range(1, nclusters + 1):
       cluster_indices = np.where(cluster_labels == i)[0]
       cluster_data = mat[cluster_indices]

@@ -43,12 +43,6 @@ def run() -> None:
   msa.filter_by_length_statistic()
   msa.remove_empty_cols(show=gc.DISPLAY)
 
-  # return
-
-  # filtering as an early step just for now in order to see results of img processing better
-  # msa.filter_by_reference(p.filter)
-  # if p.reorder: msa.sort_by_metric(sorting_metric=sort_by)
-
   # --- image processing to remove noise
 
   msa.img_process(cross_convolve, col_size=17, row_size=7)
@@ -63,6 +57,9 @@ def run() -> None:
   # --- clustering
 
   msa.linkage_cluster()
+
+  # msa.filter_by_reference(p.filter)
+  # if p.reorder: msa.sort_by_metric(sorting_metric=sort_by)
 
   if p.save: msa.save_to_file("proteoform-img")
 

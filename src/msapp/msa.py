@@ -160,7 +160,6 @@ class MultiSeqAlignment:
     def img_process(self, img_fun, *args, **kwargs) -> None:
         """Process the alignment by passing the current alignment matrix/image into the given image processing
         function."""
-        # TODO: maybe create enum for all possible operations so as not to expose actual implementations to caller?
         mat = img_fun(img=self._mat, *args, **kwargs)
         self._mat = mat
         self._post_op()

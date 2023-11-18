@@ -86,6 +86,20 @@ test = ["Pillow", "contourpy[test-no-images]", "matplotlib"]
 test-no-images = ["pytest", "pytest-cov", "pytest-xdist", "wurlitzer"]
 
 [[package]]
+name = "customtkinter"
+version = "5.2.1"
+description = "Create modern looking GUIs with Python"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "customtkinter-5.2.1-py3-none-any.whl", hash = "sha256:8a284d035ccd5537730bc83816bf6c456538ae81594749a946c86470cab6e87b"},
+    {file = "customtkinter-5.2.1.tar.gz", hash = "sha256:eddc1c416063e1ce1aa2793959b0814e95e22d3de3f2a940bd84828f7301f555"},
+]
+
+[package.dependencies]
+darkdetect = "*"
+
+[[package]]
 name = "cycler"
 version = "0.12.1"
 description = "Composable style cycles"
@@ -99,6 +113,20 @@ files = [
 [package.extras]
 docs = ["ipython", "matplotlib", "numpydoc", "sphinx"]
 tests = ["pytest", "pytest-cov", "pytest-xdist"]
+
+[[package]]
+name = "darkdetect"
+version = "0.8.0"
+description = "Detect OS Dark Mode from Python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "darkdetect-0.8.0-py3-none-any.whl", hash = "sha256:a7509ccf517eaad92b31c214f593dbcf138ea8a43b2935406bbd565e15527a85"},
+    {file = "darkdetect-0.8.0.tar.gz", hash = "sha256:b5428e1170263eb5dea44c25dc3895edd75e6f52300986353cd63533fe7df8b1"},
+]
+
+[package.extras]
+macos-listener = ["pyobjc-framework-Cocoa"]
 
 [[package]]
 name = "fonttools"
@@ -573,6 +601,28 @@ dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
+name = "pygubu"
+version = "0.31"
+description = "A simple GUI builder for the python tkinter module"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "pygubu-0.31-py3-none-any.whl", hash = "sha256:b8a177deee56a9686e2a9d2939f4af5e82b27c504bf51c79610d33a8c5b6a04d"},
+    {file = "pygubu-0.31.tar.gz", hash = "sha256:058625866885eaa76dfdad148c8136c1989d6d85abd2d0156a0529c3e94b49c5"},
+]
+
+[package.extras]
+all = ["AwesomeTkinter", "customtkinter", "tkcalendar", "tkintermapview", "tkintertable", "tkinterweb", "tksheet", "ttkwidgets"]
+awesometkinter = ["AwesomeTkinter"]
+customtkinter = ["customtkinter (>=5.0.3)"]
+tkcalendar = ["tkcalendar"]
+tkintermapview = ["tkintermapview"]
+tkintertable = ["tkintertable"]
+tkinterweb = ["tkinterweb"]
+tksheet = ["tksheet"]
+ttkwidgets = ["ttkwidgets"]
+
+[[package]]
 name = "pyparsing"
 version = "3.1.1"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
@@ -813,4 +863,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "2bf4a6e3060c51dbb48ea926064a6a6d4355335f02de9376c4882efe5907d409"
+content-hash = "42ba18daa835c13a3c5f17f887b9a619ba2955258fb482b3ac3bce6e5d1a1655"

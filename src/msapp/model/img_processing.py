@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 import msapp.gconst as gc
-from msapp.visualize import show_pre_post
+from msapp.view.visualization import show_pre_post
 
 
 def blur(img: np.array, ksize=9, show=None):

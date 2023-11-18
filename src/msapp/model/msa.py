@@ -1,12 +1,14 @@
 import copy
+from matplotlib.figure import Figure
 import numpy as np
 from pysam import FastxFile
+import re
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import pdist
 from scipy.stats import mode
 
 import msapp.gconst as gc
-from msapp.visualize import imgsave, visualize_clusters, visualize_cluster_consensuses, show, show_hist
+from msapp.view.visualization import imgsave, visualize_clusters, visualize_cluster_consensuses, show, show_hist, remove_empty_cols
 
 
 class MultiSeqAlignment:
@@ -14,9 +16,9 @@ class MultiSeqAlignment:
 
     def __init__(self, filename: str = "") -> None:
         """Constructor. If filename given, loads msa, checks state and initializes binary matrix."""
-        # TODO: track indices of rows and cols to be able to reconstruct sequences/indices
         self.initialized = False
         self._filename = ""
+        self._mat = None
         self.nrows: int = -1
         self.ncols: int = -1
         self._ridx: np.array = []  # list of row indices
@@ -32,7 +34,7 @@ class MultiSeqAlignment:
         """Initializes a MultiSeqAlignment object with a given binary matrix. Mainly for testing.
         arg binary_mat: two-dimensional np.array with np.uint8 values"""
         if self.initialized: raise ValueError("The MSA object has already been initialized.")
-        assert binary_mat is not None
+        if binary_mat is None: raise ValueError("The MSA matrix cannot be None.")
 
         self._mat = binary_mat
         self.nrows: int = binary_mat.shape[0]
@@ -41,22 +43,35 @@ class MultiSeqAlignment:
         self._cidx = np.array([i for i in range(self.ncols)])
         self.initialized = True
         print(f"Successfully loaded MSA ({self.nrows} sequences of length {self.ncols})")
+        return True
 
-    def init_from_file(self, filename: str):
+    def init_from_file(self, filename: str) -> bool:
         """Initializes a MultiSeqAlignment object from a msa fasta file."""
         if self.initialized: raise ValueError("The MSA object has already been initialized.")
-        self._filename: str = filename
 
         # Create a binary matrix from the multiple sequence alignment file
         msa_mat = []
-        with FastxFile(self._filename) as fh:
-            for row in fh:
-                the_row = []
-                for letter in row.sequence:
-                    the_row.append(0 if letter.isalpha() else 1)
-                msa_mat.append(the_row)
-            fh.close()
+        try:
+            with FastxFile(filename) as fh:
+                for entry in fh:
+                    seq = entry.sequence
+                    if not re.match("^[A-Za-z-]*$", seq):
+                        print(f"A line in the MSA file does not match the expected pattern. Returning.")
+                        raise ValueError("A line in the MSA fasta file does not match the expected pattern.")
+                    the_row = []
+                    for letter in seq:
+                        the_row.append(0 if letter.isalpha() else 1)
+                    msa_mat.append(the_row)
+                fh.close()
+        except:
+            print("Not a valid fasta file! Returning.")
+            return False
 
+        if msa_mat == None or len(msa_mat) == 0:
+            print("Could not initialize MSA object from the given fasta file. Returning.")
+            return False
+
+        self._filename: str = filename
         msa_mat = np.array(msa_mat, dtype=np.uint8)
         self._mat = msa_mat
         self.nrows = msa_mat.shape[0]
@@ -69,6 +84,7 @@ class MultiSeqAlignment:
         if gc.VERBOSE: self.print_msa(1)
         if gc.DISPLAY: self.visualize("Original")
         self._post_op()
+        return True
 
     ############### filter operations
 
@@ -166,24 +182,28 @@ class MultiSeqAlignment:
 
     ############### cluster operations, constructs implicit phylogenetic tree
 
-    def linkage_cluster(self, cmethod: str = "complete") -> None:
+    def get_linkage_mat(self, cmethod: str = "complete") -> np.array:
+        distance_matrix = pdist(self._mat, metric='hamming')
+        linkage_mat = linkage(distance_matrix, method=cmethod)
+        return linkage_mat
+
+    def linkage_cluster(self) -> None:
         """Clusters a MSA by some method.
         The Result is a number of clusters and their assigned sequences? Or positions, to directly identify domains?
         """
         print("\n-- OP: Linkage clustering.")
-        distance_matrix = pdist(self._mat, metric='hamming')
-        linkage_mat = linkage(distance_matrix, method=cmethod)
+        linkage_mat = self.get_linkage_mat()
         if gc.DISPLAY: visualize_clusters(self._mat, linkage_mat)
 
-        self.calc_consensus_clusters(linkage_mat, perc_threshold=gc.DENDOGRAM_CUT_HEIGHT)
+        self.calc_consensus_clusters(linkage_mat, perc_threshold=gc.DENDROGRAM_CUT_HEIGHT)
         self._post_op()
 
     def calc_consensus_clusters(self, linkage_mat: np.array, perc_threshold: float):
-        """Calculate clusters based on relative similarity in dendogram and a consensus sequence (average) per cluster.
-        arg perc_threshold: relative dendogram height to cut at (0 to 1), where 1 is the root (one cluster),
+        """Calculate clusters based on relative similarity in dendrogram and a consensus sequence (average) per cluster.
+        arg perc_threshold: relative dendrogram height to cut at (0 to 1), where 1 is the root (one cluster),
         0 the leaves (one cluster for every distinct row)"""
         if perc_threshold < 0 or perc_threshold > 1: raise ValueError(
-            "The dendogram cut height must be between 0 and 1.")
+            "The dendrogram cut height must be between 0 and 1.")
 
         mat = copy.deepcopy(self._mat)
         max_val = max(linkage_mat[:, 2])
@@ -240,14 +260,15 @@ class MultiSeqAlignment:
     ############### helper/debug
 
     def print_msa(self, n) -> None:
+        if self._filename == "": return
         if n < 1: return
         i = 0
         with FastxFile(self._filename) as fh:
             for entry in fh:
-                print(entry.name)
-                print(entry.sequence)
-                print(entry.comment)
-                print(entry.quality)
+                print(f"name: {entry.name}\n")
+                print(f"seq: {entry.sequence}\n")
+                print(f"comment: {entry.comment}\n")
+                print(f"quality: {entry.quality}\n")
                 i += 1
                 if i >= n: break
             fh.close()
@@ -256,9 +277,23 @@ class MultiSeqAlignment:
 
     def visualize(self, title_addon: str = "") -> None:
         """Shows a binary image of the alignment."""
+        if not self.initialized or self._mat is None:
+            print("Matrix not initialized; cannot visualize.")
+            return
         aligned_str = "" if self._filter_idx == -1 else f", ref. row {self._filter_idx}"
         addstr = "" if title_addon == "" else f": {title_addon}"
         show(self._mat, f"MSA{addstr} (1 seq/row, white=gap{aligned_str})")
+
+    def get_mat_visualization(self, hide_empty_cols: bool = False, max_row_width: int = -1) -> Figure:
+        if not self.initialized or self._mat is None:
+            print("Matrix not initialized; cannot visualize.")
+            return
+        mat = self._mat
+        if hide_empty_cols:
+            mat = copy.deepcopy(self._mat)
+            mat = remove_empty_cols(mat)
+
+        return show(mat, "", max_row_width)
 
     def save_to_file(self, filename: str) -> None:
         """Saves the final alignment image as well as the identified proteoform positions."""

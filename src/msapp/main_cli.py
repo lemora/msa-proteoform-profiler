@@ -2,8 +2,8 @@ import argparse
 import sys
 
 import msapp.gconst as gc
-from msapp.msa import MultiSeqAlignment
-from msapp.imgmagic import cross_convolve
+from msapp.model.msa import MultiSeqAlignment
+from msapp.model.img_processing import cross_convolve, gaussian_blur
 
 
 def parse_command_line(argv) -> argparse.ArgumentParser:
@@ -19,8 +19,8 @@ def parse_command_line(argv) -> argparse.ArgumentParser:
                    help='reorder the rows in an alignment matrix')
     p.add_argument('-f', '--filter', type=int, default=-1,
                    help='filter the msa based on the sequence with this index (default: 0)')
-    p.add_argument('-c', '--cut_height_dendogram', type=float, default=0.5,
-                   help='Dendogram cut height to determine cluster count (1: root, single cluster; 0: leaves, '
+    p.add_argument('-c', '--cut_height_dendrogram', type=float, default=0.5,
+                   help='Dendrogram cut height to determine cluster count (1: root, single cluster; 0: leaves, '
                         'one cluster per distinct sequence)')
     args = p.parse_args(argv)
     return args
@@ -33,7 +33,7 @@ def run() -> None:
     p = parse_command_line(argv)
     gc.DISPLAY = p.display
     gc.VERBOSE = p.verbose
-    gc.DENDOGRAM_CUT_HEIGHT = p.cut_height_dendogram
+    gc.DENDROGRAM_CUT_HEIGHT = p.cut_height_dendrogram
     if gc.VERBOSE:
         print("Finished parsing command line arguments")
         print(f"verbose:{gc.VERBOSE}; display:{gc.DISPLAY}")
@@ -56,6 +56,8 @@ def run() -> None:
 
     # cleaning step, optional. Loses horizontal fragmentation
     msa.remove_empty_cols(show=gc.DISPLAY)
+
+    msa.img_process(gaussian_blur)
 
     # --- clustering
 

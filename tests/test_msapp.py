@@ -4,7 +4,7 @@ from numpy.testing import assert_array_equal, assert_approx_equal
 import pytest
 
 import msapp.gconst as gc
-from msapp.msa import MultiSeqAlignment
+from msapp.model.msa import MultiSeqAlignment
 
 # ------------------------------
 gc.DISPLAY = False

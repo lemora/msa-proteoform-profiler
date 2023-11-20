@@ -8,7 +8,8 @@ from scipy.spatial.distance import pdist
 from scipy.stats import mode
 
 import msapp.gconst as gc
-from msapp.view.visualization import imgsave, visualize_clusters, visualize_cluster_consensuses, show, show_hist, remove_empty_cols
+from msapp.model.mat_manipulation import remove_empty_cols, sort_by_metric
+from msapp.view.visualization import imgsave, visualize_clusters, visualize_cluster_consensuses, show, show_hist
 
 
 class MultiSeqAlignment:
@@ -47,29 +48,39 @@ class MultiSeqAlignment:
 
     def init_from_file(self, filename: str) -> bool:
         """Initializes a MultiSeqAlignment object from a msa fasta file."""
-        if self.initialized: raise ValueError("The MSA object has already been initialized.")
+        if self.initialized: raise ValueError("The MSA object has already been initialized.\n")
 
         # Create a binary matrix from the multiple sequence alignment file
         msa_mat = []
-        try:
-            with FastxFile(filename) as fh:
-                for entry in fh:
-                    seq = entry.sequence
-                    if not re.match("^[A-Za-z-]*$", seq):
-                        print(f"A line in the MSA file does not match the expected pattern. Returning.")
-                        raise ValueError("A line in the MSA fasta file does not match the expected pattern.")
-                    the_row = []
-                    for letter in seq:
-                        the_row.append(0 if letter.isalpha() else 1)
-                    msa_mat.append(the_row)
-                fh.close()
-        except:
-            print("Not a valid fasta file! Returning.")
-            return False
+        min_rlen = -1
+        max_rlen = -1
+        with FastxFile(filename) as fh:
+            for entry in fh:
+                seq = entry.sequence
+                if not re.match("^[A-Za-z-]*$", seq):
+                    err_msg = f"Could not load MSA; a line does not match the expected pattern.\n"
+                    print(err_msg)
+                    raise ValueError(err_msg)
+                the_row = []
+                rlen = len(seq)
+                if min_rlen == -1 or rlen < min_rlen:
+                    min_rlen = rlen
+                if max_rlen == -1 or rlen > max_rlen:
+                    max_rlen = rlen
+                for letter in seq:
+                    the_row.append(0 if letter.isalpha() else 1)  # the_row = np.array(the_row, dtype=np.uint8)
+                msa_mat.append(the_row)
+            fh.close()
 
         if msa_mat == None or len(msa_mat) == 0:
-            print("Could not initialize MSA object from the given fasta file. Returning.")
+            print("Could not initialize MSA object from the given fasta file.\n")
             return False
+
+        print(f"MSA mat. min len: {min_rlen}, max len: {max_rlen}")
+        if min_rlen != max_rlen:
+            err_msg = "The fasta sequences are not equally long, this in not a valid alignment file.\n"
+            print(err_msg)
+            raise ValueError(err_msg)
 
         self._filename: str = filename
         msa_mat = np.array(msa_mat, dtype=np.uint8)
@@ -86,7 +97,7 @@ class MultiSeqAlignment:
         self._post_op()
         return True
 
-    ############### filter operations
+    # ------ filter operations
 
     def filter_by_length_statistic(self) -> None:
         """Creates a histogram of sequence lengths, then removes all longer than 3 std deviations above the median."""
@@ -106,6 +117,7 @@ class MultiSeqAlignment:
 
     def filter_by_reference(self, idx: int, force=False) -> None:
         """Filters the alignment matrix by a given row in that MSA. Final step, visualization purposes."""
+        # TODO: now redundant. remove?
         if idx >= self.nrows: raise ValueError("The index needs to be smaller than the number of rows.")
 
         if self._filtered_by_reference:
@@ -127,6 +139,7 @@ class MultiSeqAlignment:
 
     def remove_empty_cols(self, show: bool = False):
         """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
+        # TODO: now redundant. remove?
         print("\n-- OP: Removing empty columns.")
         empty_columns = np.where(np.all(self._mat == 1, axis=0))[0]
         self.remove_seqs_from_alignment(empty_columns, cols=True)
@@ -136,6 +149,7 @@ class MultiSeqAlignment:
     def remove_seqs_from_alignment(self, idx_list: np.ndarray[int], cols: bool = True) -> None:
         """Removes the columns (else rows) which have the given indices.
         param cols: should remove columns, else remove rows."""
+        # TODO: now redundant. remove?
         if len(idx_list) == 0: return
         max_idx = self.ncols if cols else self.nrows
         if min(idx_list) < 0 or max(idx_list) >= max_idx:
@@ -153,17 +167,16 @@ class MultiSeqAlignment:
         self.ncols = filtered.shape[1]
         self._mat = filtered
 
-    ############### sort operations
+    # ------ sort operations
 
     def sort_by_metric(self, sorting_metric=lambda row: sum(row)) -> None:
         """Sorts a MSA binary matrix by the given function that works on a binary list."""
+        # TODO: now redundant. remove?
         print("\n-- OP: sorting MSA rows.")
         mat = copy.deepcopy(self._mat)
         sorting_metrics = np.apply_along_axis(sorting_metric, axis=1, arr=mat)
 
-        # print("Sorting metrics (maybe idx odering?): ", sorting_metrics)
         # TODO: update index lists!
-
         sorted_indices = np.argsort(sorting_metrics)
         sorted_matrix = mat[sorted_indices]
 
@@ -171,7 +184,7 @@ class MultiSeqAlignment:
         if gc.DISPLAY: self.visualize("Rows sorted")
         self._post_op()
 
-    ############### image processing
+    # ------ image processing
 
     def img_process(self, img_fun, *args, **kwargs) -> None:
         """Process the alignment by passing the current alignment matrix/image into the given image processing
@@ -180,14 +193,14 @@ class MultiSeqAlignment:
         self._mat = mat
         self._post_op()
 
-    ############### cluster operations, constructs implicit phylogenetic tree
+    # ------ cluster operations, constructs implicit phylogenetic tree
 
     def get_linkage_mat(self, cmethod: str = "complete") -> np.array:
         distance_matrix = pdist(self._mat, metric='hamming')
         linkage_mat = linkage(distance_matrix, method=cmethod)
         return linkage_mat
 
-    def linkage_cluster(self) -> None:
+    def linkage_cluster(self, dendogram_cut_height: float = 0.5) -> None:
         """Clusters a MSA by some method.
         The Result is a number of clusters and their assigned sequences? Or positions, to directly identify domains?
         """
@@ -195,7 +208,7 @@ class MultiSeqAlignment:
         linkage_mat = self.get_linkage_mat()
         if gc.DISPLAY: visualize_clusters(self._mat, linkage_mat)
 
-        self.calc_consensus_clusters(linkage_mat, perc_threshold=gc.DENDROGRAM_CUT_HEIGHT)
+        self.calc_consensus_clusters(linkage_mat, perc_threshold=dendogram_cut_height)
         self._post_op()
 
     def calc_consensus_clusters(self, linkage_mat: np.array, perc_threshold: float):
@@ -208,7 +221,8 @@ class MultiSeqAlignment:
         mat = copy.deepcopy(self._mat)
         max_val = max(linkage_mat[:, 2])
         dist_threshold = perc_threshold * max_val
-        if gc.VERBOSE: print(f"Normalized dist threshold ({perc_threshold:1.2f} * {max_val:1.2f}): {dist_threshold:1.2f}")
+        if gc.VERBOSE: print(
+            f"Normalized dist threshold ({perc_threshold:1.2f} * {max_val:1.2f}): {dist_threshold:1.2f}")
 
         cluster_labels = fcluster(linkage_mat, t=dist_threshold, criterion='distance')
         nclusters = len(set(cluster_labels))
@@ -223,7 +237,7 @@ class MultiSeqAlignment:
 
         if gc.DISPLAY: visualize_cluster_consensuses(consensus_list)
 
-    ############### analysis/metrics
+    # -------- analysis/metrics
 
     def calc_cr_metric(self, verbose=None) -> (float, float):
         """Calculates a column-row noisiness metric, that is the product of the average number of column value
@@ -257,7 +271,7 @@ class MultiSeqAlignment:
         """Operations to perform at the end of an MSA processing step."""
         if gc.VERBOSE: self.calc_cr_metric(verbose=True)
 
-    ############### helper/debug
+    # -------- helper/debug
 
     def print_msa(self, n) -> None:
         if self._filename == "": return
@@ -265,15 +279,15 @@ class MultiSeqAlignment:
         i = 0
         with FastxFile(self._filename) as fh:
             for entry in fh:
-                print(f"name: {entry.name}\n")
-                print(f"seq: {entry.sequence}\n")
-                print(f"comment: {entry.comment}\n")
+                print(f"name: {entry.name}")
+                print(f"seq: {entry.sequence}")
+                print(f"comment: {entry.comment}")
                 print(f"quality: {entry.quality}\n")
                 i += 1
                 if i >= n: break
             fh.close()
 
-    ############### out
+    # -------- output
 
     def visualize(self, title_addon: str = "") -> None:
         """Shows a binary image of the alignment."""
@@ -284,7 +298,8 @@ class MultiSeqAlignment:
         addstr = "" if title_addon == "" else f": {title_addon}"
         show(self._mat, f"MSA{addstr} (1 seq/row, white=gap{aligned_str})")
 
-    def get_mat_visualization(self, hide_empty_cols: bool = False, max_row_width: int = -1) -> Figure:
+    def get_mat_visualization(self, hide_empty_cols: bool = False, reorder_rows: bool = False,
+                              max_row_width: int = -1) -> Figure:
         if not self.initialized or self._mat is None:
             print("Matrix not initialized; cannot visualize.")
             return
@@ -292,12 +307,26 @@ class MultiSeqAlignment:
         if hide_empty_cols:
             mat = copy.deepcopy(self._mat)
             mat = remove_empty_cols(mat)
+        if reorder_rows:
+            mat = sort_by_metric(mat)
 
         return show(mat, "", max_row_width)
+
+    def get_mat(self, hide_empty_cols: bool = False, reorder_rows: bool = False) -> np.array:
+        if not self.initialized or self._mat is None:
+            print("Matrix not initialized; cannot visualize.")
+            return
+        mat = copy.deepcopy(self._mat)
+        if hide_empty_cols:
+            mat = remove_empty_cols(mat)
+        if reorder_rows:
+            print("Reordering rows..")
+            mat = sort_by_metric(mat)
+        return mat
 
     def save_to_file(self, filename: str) -> None:
         """Saves the final alignment image as well as the identified proteoform positions."""
         imgsave(self._mat, filename)
-        print(f"Wrote filtered alignment image to file out/{filename}.png")
-        # TODO: save annotated image to file
+        print(
+            f"Wrote filtered alignment image to file out/{filename}.png")  # TODO: save annotated image to file  #
         # TODO: invent file format and save proteoforms + meta information

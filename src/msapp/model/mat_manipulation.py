@@ -7,6 +7,50 @@ import msapp.gconst as gc
 from msapp.view.visualization import show_pre_post
 
 
+# ----------------- mat manipulation and plotting preparation
+
+def filter_by_reference(mat, idx: int) -> None:
+    """Filters the alignment matrix by a given row in that MSA. Final step, visualization purposes."""
+    if idx >= mat.shape[0]: raise ValueError("The index needs to be smaller than the number of rows.")
+    if gc.VERBOSE: print(f"\n-- OP: Filter by reference with index {idx}")
+
+    refseq = mat[idx]
+    cols_to_remove = np.array([i for i, val in enumerate(refseq) if val == 1])
+    filtered = remove_seqs_from_alignment(mat, cols_to_remove, cols=True)
+    return filtered
+
+
+def remove_empty_cols(mat):
+    """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
+    if gc.VERBOSE: print("\n-- OP: Removing empty columns.")
+    empty_columns = np.where(np.all(mat == 1, axis=0))[0]
+    filtered = remove_seqs_from_alignment(mat, empty_columns, cols=True)
+    return filtered
+
+
+def remove_seqs_from_alignment(mat, idx_list: np.ndarray[int], cols: bool = True) -> np.array:
+    """Removes the columns (else rows) which have the given indices.
+    param cols: should remove columns, else remove rows."""
+    if len(idx_list) == 0: return mat
+    max_idx = mat.shape[1] if cols else mat.shape[0]
+    if min(idx_list) < 0 or max(idx_list) >= max_idx:
+        raise ValueError("The indices o delete must be between 0 and max row or col count.")
+
+    # mat = copy.deepcopy(mat)
+    filtered = np.delete(mat, idx_list, axis=(1 if cols else 0))
+    return filtered
+
+
+def sort_by_metric(mat, sorting_metric=lambda row: sum(row)) -> None:
+    """Sorts a MSA binary matrix by the given function that works on a binary list."""
+    sorting_metrics = np.apply_along_axis(sorting_metric, axis=1, arr=mat)
+    sorted_indices = np.argsort(sorting_metrics)
+    sorted_matrix = mat[sorted_indices]
+    return sorted_matrix
+
+
+# ----------------- classic image processing, mainly convolution
+
 def blur(img: np.array, ksize=9, show=None):
     """Blur image."""
     print(f"\n-- OP: Blur ({ksize}x{ksize} kernel)")
@@ -94,7 +138,7 @@ def create_cross_kernel(row_size: int = 1, col_size: int = 3):
     return kernel
 
 
-############### pre/post formatting
+# ----------------- pre/post formatting
 
 def to_binary_matrix(img: np.array):
     """Makes sure that after image processing the contained values are binary again: 0 or 1."""

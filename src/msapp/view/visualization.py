@@ -1,89 +1,13 @@
-import copy
 import cv2
+import math
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 import numpy as np
-from scipy.cluster.hierarchy import dendrogram
+from scipy.cluster.hierarchy import dendrogram, fcluster
+
 import seaborn as sns
 
 import msapp.gconst as gc
-
-
-# ----------------- mat manipulation as plotting preparation
-
-def filter_by_length_statistic(mat) -> None:
-    """Creates a histogram of sequence lengths, then removes all longer than 3 std deviations above the median."""
-    print("\n-- OP: Filtering by length statistic > 3 sigma.")
-    ncols = mat.shape[1]
-    seq_lengths = [ncols - sum(row) for row in mat]
-    median = np.median(seq_lengths)
-    std = np.std(seq_lengths)
-    # if gc.DISPLAY: show_hist(seq_lengths, nbins=100)
-
-    over_three_std = median + 3 * std
-    seqs_over_three_std = np.array([idx for idx, l in enumerate(seq_lengths) if l > over_three_std])
-    remove_seqs_from_alignment(mat, idx_list=seqs_over_three_std, cols=False)
-
-
-def filter_by_reference(mat, idx: int) -> None:
-    """Filters the alignment matrix by a given row in that MSA. Final step, visualization purposes."""
-    if idx >= mat.shape[0]: raise ValueError("The index needs to be smaller than the number of rows.")
-
-    print(f"\n-- OP: Filter by reference with index {idx}")
-    refseq = mat[idx]
-    cols_to_remove = np.array([i for i, val in enumerate(refseq) if val == 1])
-    filtered = remove_seqs_from_alignment(mat, cols_to_remove, cols=True)
-    return filtered
-
-
-def remove_empty_cols(mat):
-    """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
-    print("\n-- OP: Removing empty columns.")
-    empty_columns = np.where(np.all(mat == 1, axis=0))[0]
-    filtered = remove_seqs_from_alignment(mat, empty_columns, cols=True)
-    return filtered
-
-
-def remove_seqs_from_alignment(mat, idx_list: np.ndarray[int], cols: bool = True) -> np.array:
-    """Removes the columns (else rows) which have the given indices.
-    param cols: should remove columns, else remove rows."""
-    if len(idx_list) == 0: return mat
-    max_idx = mat.shape[1] if cols else mat.shape[0]
-    if min(idx_list) < 0 or max(idx_list) >= max_idx:
-        raise ValueError("The indices o delete must be between 0 and max row or col count.")
-
-    # mat = copy.deepcopy(mat)
-    filtered = np.delete(mat, idx_list, axis=(1 if cols else 0))
-    return filtered
-
-
-def create_subimages_mat(mat, max_row_width: int = -1):
-    binary_image = np.array(mat, dtype=np.uint8) * 255
-    # Split the image into equal columns
-    height, width = binary_image.shape
-    if max_row_width != -1:
-        print(f"width: {width}, max row width: {max_row_width}")
-        splits = max(round(width / max_row_width), 2)
-    else:
-        splits = 3 if mat.shape[1] > 8000 else 2
-
-    subimage_width = width // splits
-    concat_img = cv2.cvtColor(binary_image, cv2.COLOR_GRAY2BGR)
-
-    separator = np.zeros((12, subimage_width, 3), dtype=np.uint8)
-    separator[:, :] = (150, 150, 0)  # colourful border
-
-    subimages = []
-    for i in range(splits):
-        start_col = i * subimage_width
-        end_col = (i + 1) * subimage_width
-        subimage = binary_image[:, start_col:end_col]
-        subimage = cv2.cvtColor(subimage, cv2.COLOR_GRAY2BGR)
-        subimages.append(subimage)
-        if i < splits - 1:
-            subimages.append(separator)
-
-    return np.vstack(subimages)
 
 
 # ----------------- general plotting
@@ -92,7 +16,8 @@ def create_subimages_mat(mat, max_row_width: int = -1):
 def show_pre_post(pre, post, title: str) -> None:
     if pre.shape[1] > 3000:
         if gc.VERBOSE: print("INFO: Image is too large to show pre/post. Just showing post version.")
-        show_as_subimages(post, title)
+        si_mat = create_subimages_mat(post, -1)
+        show_as_subimages(si_mat, title)
         return
 
     plt.subplot(121)
@@ -111,9 +36,10 @@ def show_pre_post(pre, post, title: str) -> None:
     return fig
 
 
-def show(msa_mat, title: str, max_row_width: int = -1) -> Figure:
-    if msa_mat.shape[1] > 3000 or max_row_width != -1:
-        return show_as_subimages(msa_mat, title, max_row_width)
+def show(msa_mat, title: str, splits: int = -1) -> Figure:
+    if msa_mat.shape[1] > 3000 or splits != -1:
+        si_mat = create_subimages_mat(msa_mat, splits)
+        return show_as_subimages(si_mat, title)
     else:
         return show_as_one(msa_mat, title)
 
@@ -129,12 +55,13 @@ def show_as_one(mat, title: str) -> Figure:
     plt.xlabel("Position in aligned sequence")
     plt.ylabel("Sequence number")
     if gc.DISPLAY: plt.show()
-    return img
+    return figure
 
 
-def show_as_subimages(mat, title: str, max_row_width: int = -1) -> Figure:
-    """Shows the alignmet as a binary image split over several rows."""
-    concat_img = create_subimages_mat(mat, max_row_width)
+def show_as_subimages(mat, title: str, splits: int = -1) -> Figure:
+    """Shows the alignmet as a binary image split over several rows. Expects a subimaged mat to be passed in."""
+    # concat_img = create_subimages_mat(mat, splits)
+    concat_img = mat
     # scale down image: otherwise too large to properly display. mainly a cv2 problem
     # concat_img = cv2.resize(concat_img, (concat_img.shape[1] // 2, concat_img.shape[0] // 2))
 
@@ -148,6 +75,66 @@ def show_as_subimages(mat, title: str, max_row_width: int = -1) -> Figure:
 
     if gc.DISPLAY: plt.show()
     return figure
+
+
+def create_subimages_mat(mat, splits: int = -1):
+    """Splits a matrix into several row blocks and appends them as columns with a separator.
+    For visualoization."""
+    # TODO: instead use hight to width ratio for mat formatting!
+    # TODO: create row or col subimages, depending on dominating axis!
+    binary_image = np.array(mat, dtype=np.uint8) * 255
+    # Split the image into equal columns
+    height, width = binary_image.shape
+    if splits == -1:
+        splits = 3 if mat.shape[1] > 8000 else 2
+
+    subimage_width = width // splits
+    # concat_img = cv2.cvtColor(binary_image, cv2.COLOR_GRAY2BGR)
+
+    separator = np.zeros((12, subimage_width, 3), dtype=np.uint8)
+    separator[:, :] = (150, 150, 0)  # colourful border
+
+    subimages = []
+    for i in range(splits):
+        start_col = i * subimage_width
+        end_col = (i + 1) * subimage_width
+        subimage = binary_image[:, start_col:end_col]
+        subimage = cv2.cvtColor(subimage, cv2.COLOR_GRAY2BGR)
+        subimages.append(subimage)
+        if i < splits - 1:
+            subimages.append(separator)
+
+    return np.vstack(subimages)
+
+
+def create_resized_mat_visualization(mat: np.array, target_ratio: float):
+    original_height, original_width = mat.shape
+    original_ratio = original_width / original_height
+
+    # Calculate the potential splits for both row and column
+    splits_by_row = math.ceil(math.sqrt(original_height * target_ratio / original_width))
+    splits_by_column = math.ceil(math.sqrt(original_width / (original_height * target_ratio)))
+
+    # Calculate the resulting aspect ratios for both cases
+    new_ratio_row = (original_width * splits_by_row) / (original_height / splits_by_row)
+    new_ratio_column = (original_width / splits_by_column) / (original_height * splits_by_column)
+
+    # Choose the splits that brings us closer to the target ratio
+    if abs(new_ratio_row - target_ratio) < abs(new_ratio_column - target_ratio):
+        split_count = splits_by_row
+        split_by_row =  True
+    else:
+        split_count = splits_by_column
+        split_by_row =  False
+
+    # if splitting by row is more optimal, transpose matrix pre and post calling the splitting by col function
+    if split_count == 1: return mat
+    if split_by_row:
+        mat = cv2.transpose(mat)
+    subimaged = create_subimages_mat(mat, split_count)
+    if split_by_row:
+        return cv2.transpose(subimaged)
+    return subimaged
 
 
 # ----------------- clustering
@@ -175,10 +162,8 @@ def visualize_cluster_consensuses(consensus_sequences: list[list]):
 def visualize_clusters(mat, linkage_mat) -> None:
     """Plot the original matrix with highlighted clusters in the form of a dendrogram."""
     dendrogram(linkage_mat)
-
     sns.set(style="white")
     sns.clustermap(mat, row_linkage=linkage_mat, col_cluster=False, method='complete')
-
     plt.show()
 
 
@@ -191,14 +176,40 @@ def create_clustermap(mat, linkage_mat) -> Figure:
 def create_dendogram(linkage_mat) -> Figure:
     fig, ax = plt.subplots()
     dendrogram(linkage_mat, ax=ax)
+    # desired_num_clusters = 0.75
+    # plt.axhline(y=desired_num_clusters, linestyle='--', color='red', label='Desired Clusters')
+
+    yticks_curr = ax.get_yticklabels()
+    ytick_len = len(yticks_curr)
+    ldist = 1/(ytick_len-2)
+    # ytick_labels = [f"{ldist*i:1.1f}" for i in range(ytick_len)]
+    # ytick_labels = [f"{ldist*i:1.1f}" for i in range(ytick_len-1)]
+    # ax.set_yticklabels(ytick_labels)
+    y = [0]
+    ylabels = ['0.0']
+    ax.set_yticks(y, labels=ylabels)
     plt.xticks([])
-    ytick_len = len(ax.get_yticklabels())
-    ldist = 1.1/ytick_len
-    ytick_labels = [f"{ldist*i:1.1f}" for i in range(ytick_len)]
-    ax.set_yticklabels(ytick_labels)
+    # plt.yticks([])
     plt.xlabel("Aligned sequences reordered by similarity")
     plt.ylabel("Branching by similarity")
     return fig
+
+
+def create_dendogram_height_cluster_count_plot(linkage_mat):
+    max_val = max(linkage_mat[:, 2])
+    xvals = np.arange(0.0, 1.1, 0.05)
+    d = max_val/len(xvals)
+    yvals = [len(set(fcluster(linkage_mat, t=(d*i), criterion='distance'))) for i in xvals]
+
+    fig, ax = plt.subplots()
+    ax.plot(xvals, yvals, linewidth=2.0)
+    plt.xlabel("Dendogram tree height, from leaves to root")
+    plt.ylabel("Number of clusters")
+    return fig
+
+    # dendrogram_data = dendrogram(linkage_mat, no_plot=True)
+    # heights = dendrogram_data['dcoord'][0]
+    # clusters_at_height = [len(np.unique(fcluster(linkage_mat, t=h, criterion='distance'))) for h in heights]
 
 # ----------------- statistics
 

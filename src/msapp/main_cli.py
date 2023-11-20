@@ -3,7 +3,7 @@ import sys
 
 import msapp.gconst as gc
 from msapp.model.msa import MultiSeqAlignment
-from msapp.model.img_processing import cross_convolve, gaussian_blur
+from msapp.model.mat_manipulation import cross_convolve, gaussian_blur
 
 
 def parse_command_line(argv) -> argparse.ArgumentParser:
@@ -33,7 +33,6 @@ def run() -> None:
     p = parse_command_line(argv)
     gc.DISPLAY = p.display
     gc.VERBOSE = p.verbose
-    gc.DENDROGRAM_CUT_HEIGHT = p.cut_height_dendrogram
     if gc.VERBOSE:
         print("Finished parsing command line arguments")
         print(f"verbose:{gc.VERBOSE}; display:{gc.DISPLAY}")
@@ -68,6 +67,6 @@ def run() -> None:
 
     gc.DISPLAY = True
 
-    msa.linkage_cluster()
+    msa.linkage_cluster(p.cut_height_dendrogram)
 
     if p.save: msa.save_to_file("proteoform-img")

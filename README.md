@@ -7,11 +7,7 @@
 ### Dependencies
 
 We use python 3.11 and [poetry](https://github.com/python-poetry/poetry) 1.6.1.
-All package versions are managed by poetry. It is advised to create a virtual environment:
-```
-poetry env use /full/path/to/python
-poetry env info
-```
+All package versions are managed by poetry.
 
 ### Running/Testing
 
@@ -21,10 +17,14 @@ poetry shell
 poetry install
 ```
 
-**Running**:
+**Running** the CLI:
 ```
-# when in venv + installed:
-msapp [options] <msa file>
+poetry run msapp [options] <msa file>
+```
+
+**Running** the GUI:
+```
+poetry run msapp-gui
 ```
 
 **Testing**:

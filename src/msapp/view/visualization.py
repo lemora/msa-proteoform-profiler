@@ -139,12 +139,12 @@ def create_resized_mat_visualization(mat: np.array, target_ratio: float):
 
 # ----------------- clustering
 
-def visualize_cluster_consensuses(consensus_sequences: list[list]):
+def create_cluster_consensus_visualization(consensus_sequences: list[list]):
     """Shows the consensus of a number of sequence clusters based on similarity."""
     sorted_cseqs = consensus_sequences
     num_blocks = len(sorted_cseqs)
-    rows_per_block = 30
-    if num_blocks > 100: rows_per_block = 1
+    # rows_per_block = 130 if num_blocks < 5 else 60 if num_blocks < 12 else 1
+    rows_per_block = int(500 / num_blocks)
 
     subimages = []
     for cseq in sorted_cseqs:
@@ -153,10 +153,13 @@ def visualize_cluster_consensuses(consensus_sequences: list[list]):
 
     concat_img = np.vstack(subimages)
 
-    plt.subplot(), plt.imshow(concat_img, cmap="gray"), plt.title(f"Consensuses of {num_blocks} sequence clusters")
-    plt.xlabel("Position in aligned sequence")
-    plt.ylabel("Sequence number")
-    plt.show()
+    fig, ax = plt.subplots()
+    plt.subplot(), plt.imshow(concat_img, cmap="gray"), plt.title(f"Consensus of {num_blocks} sequence clusters")
+    plt.xticks([]), plt.yticks([])
+    plt.xlabel("Position in gapless aligned sequence")
+    plt.ylabel("Clusters")
+    if gc.DISPLAY: plt.show()
+    return fig
 
 
 def visualize_clusters(mat, linkage_mat) -> None:
@@ -195,21 +198,27 @@ def create_dendogram(linkage_mat) -> Figure:
     return fig
 
 
-def create_dendogram_height_cluster_count_plot(linkage_mat):
-    max_val = max(linkage_mat[:, 2])
-    xvals = np.arange(0.0, 1.1, 0.05)
-    d = max_val/len(xvals)
-    yvals = [len(set(fcluster(linkage_mat, t=(d*i), criterion='distance'))) for i in xvals]
+def create_dendrogram_height_cluster_count_plot(linkage_mat):
+    max_distance = linkage_mat[:, 2].max()
+    distances = np.linspace(0, max_distance, num=200)
+    num_clusters_at_distance = [len(np.unique(fcluster(linkage_mat, t=d, criterion='distance'))) for d in distances]
+    normalized_distances = distances / max_distance
 
     fig, ax = plt.subplots()
-    ax.plot(xvals, yvals, linewidth=2.0)
-    plt.xlabel("Dendogram tree height, from leaves to root")
-    plt.ylabel("Number of clusters")
+    plt.plot(normalized_distances, num_clusters_at_distance, color='black')
+    xticks = np.linspace(0, 10, num=11)
+    xlabels = ["leaves" if i == 0 else "root" if i == 10 else f"{(i/10):1.1f}" for i in xticks]
+    ax.set_xticks(xticks/10, labels=xlabels)
+    plt.xlabel('Normalized distance in dendogram')
+    plt.ylabel('Number of clusters')
+    plt.yscale('log')
     return fig
 
-    # dendrogram_data = dendrogram(linkage_mat, no_plot=True)
-    # heights = dendrogram_data['dcoord'][0]
-    # clusters_at_height = [len(np.unique(fcluster(linkage_mat, t=h, criterion='distance'))) for h in heights]
+def get_emply_plot():
+    fig, ax = plt.subplots()
+    ax.axis("off")
+    plt.xticks([]), plt.yticks([])
+    return fig
 
 # ----------------- statistics
 

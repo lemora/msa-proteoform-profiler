@@ -61,24 +61,25 @@ class App(customtkinter.CTk):
                                                      text_color=("gray10", "#DCE4EE"), text="Submit")
         self.main_button_1.grid(row=3, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
+        # ------ CENTRAL TABVIEW
+
+        self.tabview_mat = customtkinter.CTkTabview(self)
+        self.tabview_mat.grid(row=0, rowspan=2, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.tabview_mat.grid_columnconfigure(0, weight=1)
+        self.tabview_mat.grid_rowconfigure((0,1), weight=1)
+        self.tabview_mat.add("MSA")
+        self.tabview_mat.add("Consensus")
+        self.tabview_mat.tab("MSA").grid_columnconfigure(0, weight=1)
+        self.tabview_mat.tab("MSA").grid_rowconfigure((0,1), weight=1)
+        self.tabview_mat.tab("Consensus").grid_columnconfigure(0, weight=1)
+        self.tabview_mat.tab("Consensus").grid_rowconfigure((0,1), weight=1)
+
         # ------ mat display frame (upper middle)
 
-        # TODO: add option/second tab to color the matrix?
+        # ------ mat view
 
-        # self.tabview_mat = customtkinter.CTkTabview(self, width=400)
-        # self.tabview_mat.grid(row=0, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        # self.tabview_mat.grid_columnconfigure(0, weight=1)
-        # self.tabview_mat.grid_rowconfigure(0, weight=1)
-        # self.tabview_mat.add("MSA")
-        # self.tabview_mat.add("Consensus sequences")
-        #
-        # self.mat_display_frame = customtkinter.CTkFrame(self.tabview_mat.tab("MSA"), fg_color="transparent")
-        # self.mat_display_frame.grid(row=0, column=0, padx=(10, 0), pady=(10, 0), sticky="nsew")
-        # self.mat_display_frame.grid_columnconfigure(0, weight=1)
-        # self.mat_display_frame.grid_rowconfigure(0, weight=1)
-
-        self.mat_display_frame = customtkinter.CTkFrame(self, fg_color="transparent")
-        self.mat_display_frame.grid(row=0, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.mat_display_frame = customtkinter.CTkFrame(self.tabview_mat.tab("MSA"), fg_color="transparent")
+        self.mat_display_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="new")
         self.mat_display_frame.grid_columnconfigure(0, weight=1)
         self.mat_display_frame.grid_rowconfigure(0, weight=1)
         self.mat_label = customtkinter.CTkLabel(self.mat_display_frame, text="MSA Matrix",
@@ -91,15 +92,32 @@ class App(customtkinter.CTk):
         ax.axis("off")
         self.canvas_mat = FigureCanvasTkAgg(fig, master=self.mat_display_frame)
         self.canvas_mat.draw()
-        self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(20, 10), pady=(30, 10), sticky="ew")
+        self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="ew")
+
+        # ------ consensus view
+
+        self.consensus_frame = customtkinter.CTkFrame(self.tabview_mat.tab("Consensus"), fg_color="transparent")
+        self.consensus_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="new")
+        self.consensus_frame.grid_columnconfigure(0, weight=1)
+        self.consensus_frame.grid_rowconfigure(0, weight=1)
+        self.mat_label = customtkinter.CTkLabel(self.consensus_frame, text="MSA Consensus",
+                                                font=customtkinter.CTkFont(size=15))
+        self.mat_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
+
+        fig, ax = plt.subplots()
+        fig.set_tight_layout(True)
+        fig.set_figheight(4)
+        ax.axis("off")
+        self.canvas_consensus = FigureCanvasTkAgg(fig, master=self.consensus_frame)
+        self.canvas_consensus.draw()
+        self.canvas_consensus.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="ew")
 
         # ------ dendrogram display frame (lower middle)
 
-        # TODO: add tab for cluster count per dendrogram height (0:root to 1:leaves)
-        # TODO: add tab for cluster consensus visualization
+        # ------ dendrogram view
 
-        self.dendrogram_display_frame = customtkinter.CTkFrame(self, fg_color="transparent")
-        self.dendrogram_display_frame.grid(row=1, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.dendrogram_display_frame = customtkinter.CTkFrame(self.tabview_mat.tab("MSA"), fg_color="transparent")
+        self.dendrogram_display_frame.grid(row=1, column=0, padx=(0, 0), pady=(0, 0), sticky="sew")
         self.dendrogram_display_frame.grid_columnconfigure(0, weight=1)
         self.dendrogram_display_frame.grid_rowconfigure(1, weight=1)
         self.dendrogram_label = customtkinter.CTkLabel(self.dendrogram_display_frame, text="Dendrogram",
@@ -112,7 +130,25 @@ class App(customtkinter.CTk):
         ax.axis("off")
         self.canvas_dendro = FigureCanvasTkAgg(fig, master=self.dendrogram_display_frame)
         self.canvas_dendro.draw()
-        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(20, 20), pady=(30, 20), sticky="ew")
+        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 20), sticky="ew")
+
+        # ------ dendrogram height cluster view
+
+        self.dendrogram_clustercount_frame = customtkinter.CTkFrame(self.tabview_mat.tab("Consensus"), fg_color="transparent")
+        self.dendrogram_clustercount_frame.grid(row=1, column=0, padx=(0, 0), pady=(0, 0), sticky="sew")
+        self.dendrogram_clustercount_frame.grid_columnconfigure(0, weight=1)
+        self.dendrogram_clustercount_frame.grid_rowconfigure(1, weight=1)
+        self.dendrogram_label = customtkinter.CTkLabel(self.dendrogram_clustercount_frame, text="Cluster count per height",
+                                                       font=customtkinter.CTkFont(size=15))
+        self.dendrogram_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
+
+        fig, ax = plt.subplots()
+        fig.set_tight_layout(True)
+        fig.set_figheight(4)
+        ax.axis("off")
+        self.canvas_dendro = FigureCanvasTkAgg(fig, master=self.dendrogram_clustercount_frame)
+        self.canvas_dendro.draw()
+        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 20), sticky="ew")
 
         # ------ tabview frame
 
@@ -152,10 +188,10 @@ class App(customtkinter.CTk):
 
         self.checkbox_var_reorder_mat_rows = customtkinter.BooleanVar()
         self.checkbox_reorder_mat_rows = customtkinter.CTkCheckBox(master=self.scrollable_frame,
-                                                                  text="Sort sequences",
-                                                                  command=self.on_reoder_mat_rows_switch,
-                                                                  variable=self.checkbox_var_reorder_mat_rows,
-                                                                  onvalue=True, offvalue=False)
+                                                                   text="Sort sequences",
+                                                                   command=self.on_reorder_mat_rows_switch,
+                                                                   variable=self.checkbox_var_reorder_mat_rows,
+                                                                   onvalue=True, offvalue=False)
         self.checkbox_reorder_mat_rows.grid(row=2, column=0, pady=10, padx=(10, 10), sticky="nw")
 
         # ------ textbox
@@ -199,8 +235,8 @@ class App(customtkinter.CTk):
     def eval_significant_resize_event(self):
         curr_mfratio = self.get_mat_frame_wh_ratio()
         if (abs(self.last_mat_frame_hwratio - curr_mfratio) > 0.2):
-            self.controller.show_msa_mat(force=True),
-            self.controller.show_dendrogram(force=True)
+            self.controller.on_show_msa_mat(force=True),
+            self.controller.on_show_dendrogram(force=True)
             self.last_mat_frame_hwratio = curr_mfratio
 
     # ------ calling the controller
@@ -209,27 +245,32 @@ class App(customtkinter.CTk):
         filename = filedialog.askopenfilename(title="Select a File",
                                               filetypes=(("fasta files", "*.fa*"), ("all files", "*.*")))
         if len(filename) != 0:
-            self.controller.initialize_from_file(filename)
-            self.controller.show_msa_mat()
-            self.controller.show_dendrogram()
-            self.button_filter_msa.configure(state="normal")
+            success: bool = self.controller.initialize_from_file(filename)
+            if success:
+                self.controller.on_show_msa_mat()
+                self.controller.on_show_dendrogram()
+                self.controller.on_show_consensus()
+                self.controller.on_show_dendro_clustercount()
+                self.button_filter_msa.configure(state="normal")
 
     def on_filter_msa(self):
         """Runs msa filtering pipeline."""
         self.controller.run_filtering_pipeline()
-        self.controller.show_msa_mat()
-        self.controller.show_dendrogram()
+        self.controller.on_show_msa_mat()
+        self.controller.on_show_dendrogram()
+        self.controller.on_show_consensus()
+        self.controller.on_show_dendro_clustercount()
         self.button_filter_msa.configure(state="disabled")
 
     def on_hide_empty_cols_switch(self):
         hide = self.checkbox_var_hide_empty_cols.get()
         self.controller.toggle_hide_empty_cols(hide)
-        self.controller.show_msa_mat()
+        self.controller.on_show_msa_mat()
 
-    def on_reoder_mat_rows_switch(self):
+    def on_reorder_mat_rows_switch(self):
         reorder = self.checkbox_var_reorder_mat_rows.get()
         self.controller.toggle_reorder_mat_rows(reorder)
-        self.controller.show_msa_mat()
+        self.controller.on_show_msa_mat()
 
     # ------ called by controller
 
@@ -243,18 +284,40 @@ class App(customtkinter.CTk):
         mat_fig.set_figheight(3.8)
         self.canvas_mat = FigureCanvasTkAgg(mat_fig, master=self.mat_display_frame)
         self.canvas_mat.draw()
-        self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(20, 10), pady=(30, 20), sticky="new")
+        self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
-    def show_dendrogram(self, mat_fig: Figure):
+    def show_dendrogram(self, dendro_fig: Figure):
         """Show the dendrogram figure corresponding to the current alignment."""
         plt.close()
-        ax = mat_fig.subplots()
+        ax = dendro_fig.subplots()
         ax.axis("off")
-        mat_fig.set_tight_layout(True)
-        mat_fig.set_figheight(3.8)
-        self.canvas_dendro = FigureCanvasTkAgg(mat_fig, master=self.dendrogram_display_frame)
+        # dendro_fig.set_tight_layout(True)
+        dendro_fig.set_figheight(3.8)
+        self.canvas_dendro = FigureCanvasTkAgg(dendro_fig, master=self.dendrogram_display_frame)
         self.canvas_dendro.draw()
-        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(20, 10), pady=(30, 20), sticky="new")
+        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
+
+    def show_consensus(self, consensus_fig: Figure):
+        """Show the dendrogram figure corresponding to the current alignment."""
+        plt.close()
+        ax = consensus_fig.subplots()
+        ax.axis("off")
+        # mat_fig.set_tight_layout(True)
+        consensus_fig.set_figheight(3.8)
+        self.canvas_dendro = FigureCanvasTkAgg(consensus_fig, master=self.consensus_frame)
+        self.canvas_dendro.draw()
+        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
+
+    def show_dendro_clustercount(self, dc_fig: Figure):
+        """Show the dendrogram figure corresponding to the current alignment."""
+        plt.close()
+        ax = dc_fig.subplots()
+        ax.axis("off")
+        dc_fig.set_tight_layout(True)
+        dc_fig.set_figheight(3.6)
+        self.canvas_dendro = FigureCanvasTkAgg(dc_fig, master=self.dendrogram_clustercount_frame)
+        self.canvas_dendro.draw()
+        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
     def add_to_textbox(self, text_to_add: str):
         self.textbox.configure(state="normal")
@@ -266,6 +329,6 @@ class App(customtkinter.CTk):
 
     def get_mat_frame_wh_ratio(self):
         w = self.mat_display_frame._current_width
-        h = self.mat_display_frame._current_height - 100
+        h = self.mat_display_frame._current_height - 150
         wh_ratio = w / h
         return wh_ratio

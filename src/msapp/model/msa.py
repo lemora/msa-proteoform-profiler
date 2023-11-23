@@ -9,7 +9,7 @@ from scipy.stats import mode
 
 import msapp.gconst as gc
 from msapp.model.mat_manipulation import remove_empty_cols, sort_by_metric
-from msapp.view.visualization import imgsave, visualize_clusters, visualize_cluster_consensuses, show, show_hist
+from msapp.view.visualization import imgsave, visualize_clusters, create_cluster_consensus_visualization, show, show_hist
 
 
 class MultiSeqAlignment:
@@ -219,6 +219,7 @@ class MultiSeqAlignment:
             "The dendrogram cut height must be between 0 and 1.")
 
         mat = copy.deepcopy(self._mat)
+        mat = remove_empty_cols(mat)
         max_val = max(linkage_mat[:, 2])
         dist_threshold = perc_threshold * max_val
         if gc.VERBOSE: print(
@@ -235,7 +236,8 @@ class MultiSeqAlignment:
             consensus_sequence = mode(cluster_data, axis=0).mode
             consensus_list.append(list(consensus_sequence))
 
-        if gc.DISPLAY: visualize_cluster_consensuses(consensus_list)
+        if gc.DISPLAY: create_cluster_consensus_visualization(consensus_list)
+        return consensus_list
 
     # -------- analysis/metrics
 

@@ -4,8 +4,8 @@ from msapp.model.msa import MultiSeqAlignment
 from msapp.view.msapp_gui import App
 from msapp.model.mat_manipulation import cross_convolve
 
-from msapp.view.visualization import create_dendogram, create_dendogram_height_cluster_count_plot, show_as_subimages, \
-    create_resized_mat_visualization
+from msapp.view.visualization import create_dendogram, create_dendrogram_height_cluster_count_plot, show_as_subimages, \
+    create_resized_mat_visualization, create_cluster_consensus_visualization, get_emply_plot
 
 
 class Controller:
@@ -17,6 +17,9 @@ class Controller:
         self.gui = None
         self.msa_changed = True  # dirty flag for msa visualization
         self.dendro_changed = True  # dirty flag for dendrogram visualization
+        self.consensus_changed = True
+        self.dclustercount_changed = True
+
         self.hide_empty_cols = False
         self.reorder_rows = False
 
@@ -34,16 +37,24 @@ class Controller:
             err_msg = str(e)
             if len(err_msg) > 0:
                 self.gui.add_to_textbox(f"ERR: {err_msg}")
-            return
+            return False
 
         fname_truncated = filename.split('/')[-1]
         if msa.initialized:
             self.msa = msa
             self.gui.add_to_textbox(f"Sucessfully loaded MSA from file '{fname_truncated}'.\n")
+
+            # reset consensus and dclust plots
+            self.gui.show_consensus(get_emply_plot())
+            self.gui.show_dendro_clustercount(get_emply_plot())
             self.msa_changed = True
             self.dendro_changed = True
+            self.consensus_changed = True
+            self.dclustercount_changed = True
         else:
             self.gui.add_to_textbox(f"Could not load MSA from file '{fname_truncated}'.")
+            return False
+        return True
 
     def cross_convolve_mat(self):
         if not self.is_mat_initialized(): return
@@ -64,6 +75,8 @@ class Controller:
         self.gui.add_to_textbox("-- OP: Cross-convolving (7x17)")
         self.msa_changed = True
         self.dendro_changed = True
+        self.consensus_changed = True
+        self.dclustercount_changed = True
 
     def is_mat_initialized(self):
         return self.msa is not None and self.msa.initialized
@@ -76,16 +89,7 @@ class Controller:
         self.reorder_rows = should_reorder
         self.msa_changed = True
 
-    def show_msa_mat_old(self, force: bool = False):
-        if not self.is_mat_initialized(): return
-        if not force and not self.msa_changed: return
-
-        max_row_width = self.gui.get_mat_frame_width()
-        fig = self.msa.get_mat_visualization(self.hide_empty_cols, self.reorder_rows, max_row_width)
-        self.gui.show_matrix(fig)
-        self.msa_changed = False
-
-    def show_msa_mat(self, force: bool = False):
+    def on_show_msa_mat(self, force: bool = False):
         if not self.is_mat_initialized(): return
         if not force and not self.msa_changed: return
 
@@ -97,7 +101,7 @@ class Controller:
             self.gui.show_matrix(fig)
             self.msa_changed = False
 
-    def show_dendrogram(self, force: bool = False):
+    def on_show_dendrogram(self, force: bool = False):
         if not self.is_mat_initialized(): return
         if not force and not self.dendro_changed: return
 
@@ -105,3 +109,20 @@ class Controller:
         # fig = create_dendogram_height_cluster_count_plot(self.msa.get_linkage_mat())
         self.gui.show_dendrogram(fig)
         self.dendro_changed = False
+
+    def on_show_consensus(self, force: bool = False):
+        if not self.is_mat_initialized(): return
+        if not force and not self.consensus_changed: return
+
+        consensus_clusters = self.msa.calc_consensus_clusters(self.msa.get_linkage_mat(), perc_threshold=0.7)
+        fig = create_cluster_consensus_visualization(consensus_clusters)
+        self.gui.show_consensus(fig)
+        self.consensus_changed = False
+
+    def on_show_dendro_clustercount(self, force: bool = False):
+        if not self.is_mat_initialized(): return
+        if not force and not self.dclustercount_changed: return
+
+        fig = create_dendrogram_height_cluster_count_plot(self.msa.get_linkage_mat())
+        self.gui.show_dendro_clustercount(fig)
+        self.consensus_changed = False

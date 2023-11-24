@@ -1,14 +1,12 @@
-import tkinter
-import tkinter.messagebox
 from tkinter import filedialog
 import customtkinter
 
-from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+customtkinter.set_appearance_mode("System")
+customtkinter.set_default_color_theme("blue")
 
 
 class App(customtkinter.CTk):
@@ -19,7 +17,7 @@ class App(customtkinter.CTk):
         # ------ configure window
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.bind("<Configure>", self.resizing)
+        self.bind("<Configure>", self.on_resizing)
 
         self.title("MSA Proteoform Profiler")
         self.geometry(f"{1400}x{900}")
@@ -41,25 +39,25 @@ class App(customtkinter.CTk):
         self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, text='Load FASTA',
                                                         command=self.on_load_file)
         self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
-        self.sidebar_button_2 = customtkinter.CTkButton(self.sidebar_frame, text="Save", command=self.on_save)
-        self.sidebar_button_2.grid(row=2, column=0, padx=20, pady=10)
-        self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, text="Quit", command=self.on_closing)
-        self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
+        self.sidebar_button_save = customtkinter.CTkButton(self.sidebar_frame, text="Save", command=self.on_save)
+        self.sidebar_button_save.grid(row=2, column=0, padx=20, pady=10)
+        self.sidebar_button_close = customtkinter.CTkButton(self.sidebar_frame, text="Quit", command=self.on_closing)
+        self.sidebar_button_close.grid(row=3, column=0, padx=20, pady=10)
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame,
                                                                        values=["Light", "Dark", "System"],
-                                                                       command=self.change_appearance_mode_event)
+                                                                       command=self.on_change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
 
         # ------ bottom row field + button
 
-        self.entry = customtkinter.CTkEntry(self, placeholder_text="log something...")
-        self.entry.grid(row=3, column=1, columnspan=2, padx=(20, 0), pady=(20, 20), sticky="nsew")
+        self.entry_line = customtkinter.CTkEntry(self, placeholder_text="...")
+        self.entry_line.grid(row=3, column=1, columnspan=2, padx=(20, 0), pady=(20, 20), sticky="nsew")
 
-        self.main_button_1 = customtkinter.CTkButton(master=self, fg_color="transparent", border_width=2,
-                                                     text_color=("gray10", "#DCE4EE"), text="Submit")
-        self.main_button_1.grid(row=3, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
+        self.main_button_submit = customtkinter.CTkButton(master=self, fg_color="transparent", border_width=2,
+                                                          text_color=("gray10", "#DCE4EE"), text="Submit")
+        self.main_button_submit.grid(row=3, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
         # ------ CENTRAL TABVIEW
 
@@ -138,7 +136,7 @@ class App(customtkinter.CTk):
         self.dendrogram_clustercount_frame.grid(row=1, column=0, padx=(0, 0), pady=(0, 0), sticky="sew")
         self.dendrogram_clustercount_frame.grid_columnconfigure(0, weight=1)
         self.dendrogram_clustercount_frame.grid_rowconfigure(1, weight=1)
-        self.dendrogram_label = customtkinter.CTkLabel(self.dendrogram_clustercount_frame, text="Cluster count per height",
+        self.dendrogram_label = customtkinter.CTkLabel(self.dendrogram_clustercount_frame, text="Cluster Count Per Height",
                                                        font=customtkinter.CTkFont(size=15))
         self.dendrogram_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
 
@@ -146,9 +144,9 @@ class App(customtkinter.CTk):
         fig.set_tight_layout(True)
         fig.set_figheight(4)
         ax.axis("off")
-        self.canvas_dendro = FigureCanvasTkAgg(fig, master=self.dendrogram_clustercount_frame)
-        self.canvas_dendro.draw()
-        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 20), sticky="ew")
+        self.canvas_dendro_clustercount = FigureCanvasTkAgg(fig, master=self.dendrogram_clustercount_frame)
+        self.canvas_dendro_clustercount.draw()
+        self.canvas_dendro_clustercount.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 20), sticky="ew")
 
         # ------ tabview frame
 
@@ -156,17 +154,13 @@ class App(customtkinter.CTk):
         self.tabview.grid(row=0, column=2, padx=(20, 0), pady=(20, 0), sticky="nsew")
         self.tabview.add("Basic Operations")
         self.tabview.add("Tab 2")
-        self.tabview.tab("Basic Operations").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
+        self.tabview.tab("Basic Operations").grid_columnconfigure(0, weight=1)
         self.tabview.tab("Tab 2").grid_columnconfigure(0, weight=1)
 
         # Tab 1
         self.button_filter_msa = customtkinter.CTkButton(self.tabview.tab("Basic Operations"), text="Filter MSA",
                                                          command=self.on_filter_msa)
         self.button_filter_msa.grid(row=1, column=0, padx=20, pady=(10, 10))
-        # self.button_update_dendrogram = customtkinter.CTkButton(self.tabview.tab("Basic Operations"),
-        #                                                         text="Update dendrogram",
-        #                                                         command=self.on_update_dendrogram)
-        # self.button_update_dendrogram.grid(row=2, column=0, padx=20, pady=(10, 10))
 
         # Tab 2
         self.optionmenu_2 = customtkinter.CTkOptionMenu(self.tabview.tab("Tab 2"), dynamic_resizing=False,
@@ -205,28 +199,29 @@ class App(customtkinter.CTk):
 
         # ------ set default values
 
-        self.checkbox_hide_empty_cols.deselect()
-        self.controller.hide_empty_cols = False
         self.appearance_mode_optionemenu.set("System")
         self.optionmenu_2.set("Option Menu")
-        self.textbox.configure(state="disabled")
+
+        self.sidebar_button_save.configure(state="disabled")
+        self.entry_line.configure(state="disabled")
+        self.main_button_submit.configure(state="disabled")
+
         self.button_filter_msa.configure(state="disabled")
+        self.checkbox_hide_empty_cols.deselect()
+        self.controller.hide_empty_cols = False
+        self.textbox.configure(state="disabled")
+
         self.last_mat_frame_hwratio = 0
 
     # ------ general
 
-    def on_save(self):
-        msg = "'Save' clicked, but not yet implemented."
-        print(msg)
-        self.add_to_textbox(msg)
-
     def on_closing(self):
         self.quit()
 
-    def change_appearance_mode_event(self, new_appearance_mode: str):
+    def on_change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
 
-    def resizing(self, event):
+    def on_resizing(self, event):
         if event.widget == self:
             if getattr(self, "_after_id", None):
                 self.after_cancel(self._after_id)
@@ -241,6 +236,11 @@ class App(customtkinter.CTk):
 
     # ------ calling the controller
 
+    def on_save(self):
+        msg = "'Save' clicked, but not yet implemented."
+        print(msg)
+        self.add_to_textbox(msg)
+
     def on_load_file(self):
         filename = filedialog.askopenfilename(title="Select a File",
                                               filetypes=(("fasta files", "*.fa*"), ("all files", "*.*")))
@@ -254,7 +254,6 @@ class App(customtkinter.CTk):
                 self.button_filter_msa.configure(state="normal")
 
     def on_filter_msa(self):
-        """Runs msa filtering pipeline."""
         self.controller.run_filtering_pipeline()
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
@@ -275,7 +274,6 @@ class App(customtkinter.CTk):
     # ------ called by controller
 
     def show_matrix(self, mat_fig: Figure):
-        """Show the alignment matrix."""
         w = self.mat_display_frame._current_width
         plt.close()
         ax = mat_fig.subplots()
@@ -287,7 +285,6 @@ class App(customtkinter.CTk):
         self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
     def show_dendrogram(self, dendro_fig: Figure):
-        """Show the dendrogram figure corresponding to the current alignment."""
         plt.close()
         ax = dendro_fig.subplots()
         ax.axis("off")
@@ -298,36 +295,32 @@ class App(customtkinter.CTk):
         self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
     def show_consensus(self, consensus_fig: Figure):
-        """Show the dendrogram figure corresponding to the current alignment."""
         plt.close()
         ax = consensus_fig.subplots()
         ax.axis("off")
-        # mat_fig.set_tight_layout(True)
+        # consensus_fig.set_tight_layout(True)
         consensus_fig.set_figheight(3.8)
-        self.canvas_dendro = FigureCanvasTkAgg(consensus_fig, master=self.consensus_frame)
-        self.canvas_dendro.draw()
-        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
+        self.canvas_consensus = FigureCanvasTkAgg(consensus_fig, master=self.consensus_frame)
+        self.canvas_consensus.draw()
+        self.canvas_consensus.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
     def show_dendro_clustercount(self, dc_fig: Figure):
-        """Show the dendrogram figure corresponding to the current alignment."""
         plt.close()
         ax = dc_fig.subplots()
         ax.axis("off")
-        dc_fig.set_tight_layout(True)
-        dc_fig.set_figheight(3.6)
-        self.canvas_dendro = FigureCanvasTkAgg(dc_fig, master=self.dendrogram_clustercount_frame)
-        self.canvas_dendro.draw()
-        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
+        # dc_fig.set_tight_layout(True)
+        dc_fig.set_figheight(3.8)
+        self.canvas_dendro_clustercount = FigureCanvasTkAgg(dc_fig, master=self.dendrogram_clustercount_frame)
+        self.canvas_dendro_clustercount.draw()
+        self.canvas_dendro_clustercount.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
     def add_to_textbox(self, text_to_add: str):
         self.textbox.configure(state="normal")
         self.textbox.insert(0.0, f"{text_to_add}\n")
         self.textbox.configure(state="disabled")
 
-    def get_mat_frame_width(self):
-        return self.mat_display_frame._current_width * 4
-
     def get_mat_frame_wh_ratio(self):
+        """Get the current matrix frame width to height ratio with reduced height (for plot title + x-axis label)."""
         w = self.mat_display_frame._current_width
         h = self.mat_display_frame._current_height - 150
         wh_ratio = w / h

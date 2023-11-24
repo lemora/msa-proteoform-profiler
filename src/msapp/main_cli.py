@@ -3,7 +3,7 @@ import sys
 
 import msapp.gconst as gc
 from msapp.model.msa import MultiSeqAlignment
-from msapp.model.mat_manipulation import cross_convolve, gaussian_blur
+from msapp.model.mat_manipulation import cross_convolve, filter_by_reference, gaussian_blur
 
 
 def parse_command_line(argv) -> argparse.ArgumentParser:
@@ -61,11 +61,10 @@ def run() -> None:
     # --- clustering
 
     if p.filter > 0:
-        msa.filter_by_reference(p.filter)
+        filter_by_reference(p.filter)
 
-    if p.reorder: msa.sort_by_metric(sorting_metric=sort_by)
-
-    gc.DISPLAY = True
+    if p.reorder:
+        msa.sort_by_metric(sorting_metric=sort_by)
 
     msa.linkage_cluster(p.cut_height_dendrogram)
 

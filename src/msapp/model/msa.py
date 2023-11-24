@@ -1,5 +1,4 @@
 import copy
-from matplotlib.figure import Figure
 import numpy as np
 from pysam import FastxFile
 import re
@@ -8,8 +7,8 @@ from scipy.spatial.distance import pdist
 from scipy.stats import mode
 
 import msapp.gconst as gc
-from msapp.model.mat_manipulation import remove_empty_cols, sort_by_metric
-from msapp.view.visualization import imgsave, visualize_clusters, create_cluster_consensus_visualization, show, show_hist
+from msapp.model.mat_manipulation import remove_empty_cols, remove_seqs_from_alignment, sort_by_metric
+from msapp.view.visualization import create_cluster_consensus_visualization, imgsave, visualize_clusters, show, show_hist
 
 
 class MultiSeqAlignment:
@@ -69,7 +68,8 @@ class MultiSeqAlignment:
                     max_rlen = rlen
                 for letter in seq:
                     the_row.append(0 if letter.isalpha() else 1)  # the_row = np.array(the_row, dtype=np.uint8)
-                msa_mat.append(the_row)
+                if len(the_row) > 0:
+                    msa_mat.append(the_row)
             fh.close()
 
         if msa_mat == None or len(msa_mat) == 0:
@@ -110,100 +110,51 @@ class MultiSeqAlignment:
 
         over_three_std = median + 3 * std
         seqs_over_three_std = np.array([idx for idx, l in enumerate(seq_lengths) if l > over_three_std])
-        self.remove_seqs_from_alignment(idx_list=seqs_over_three_std, cols=False)
+        self._mat = remove_seqs_from_alignment(self._mat, idx_list=seqs_over_three_std, cols=False)
+        self.nrows = self._mat.shape[0]
+        self.ncols = self._mat.shape[1]
 
         if gc.DISPLAY: self.visualize(rf"Removed {len(seqs_over_three_std)} seqs > 3 $\sigma$ length")
         self._post_op()
 
-    def filter_by_reference(self, idx: int, force=False) -> None:
-        """Filters the alignment matrix by a given row in that MSA. Final step, visualization purposes."""
-        # TODO: now redundant. remove?
-        if idx >= self.nrows: raise ValueError("The index needs to be smaller than the number of rows.")
-
-        if self._filtered_by_reference:
-            if not force:
-                print("WARN: There is already a filtered version. Use force to override")
-                return
-            else:
-                print("INFO: Forcefully overriding stored filtered version")
-
-        print(f"\n-- OP: Filter by reference with index {idx}")
-        refseq = self._mat[idx]
-        cols_to_remove = np.array([i for i, val in enumerate(refseq) if val == 1])
-        self.remove_seqs_from_alignment(cols_to_remove, cols=True)
-        self._filter_idx = idx
-        self._filtered_by_reference = True
-
-        if gc.DISPLAY: self.visualize(f"Filtered by reference {idx}")
-        self._post_op()
-
     def remove_empty_cols(self, show: bool = False):
         """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
-        # TODO: now redundant. remove?
-        print("\n-- OP: Removing empty columns.")
-        empty_columns = np.where(np.all(self._mat == 1, axis=0))[0]
-        self.remove_seqs_from_alignment(empty_columns, cols=True)
-        if show: self.visualize(f"Removed {len(empty_columns)} empty columns")
+        self._mat = remove_empty_cols(self._mat)
+        self.nrows = self._mat.shape[0]
+        self.ncols = self._mat.shape[1]
+        if show: self.visualize(f"Removed empty columns")
         self._post_op()
 
-    def remove_seqs_from_alignment(self, idx_list: np.ndarray[int], cols: bool = True) -> None:
-        """Removes the columns (else rows) which have the given indices.
-        param cols: should remove columns, else remove rows."""
-        # TODO: now redundant. remove?
-        if len(idx_list) == 0: return
-        max_idx = self.ncols if cols else self.nrows
-        if min(idx_list) < 0 or max(idx_list) >= max_idx:
-            raise ValueError("The indices o delete must be between 0 and max row or col count.")
-
-        # update index lists
-        if cols:
-            self._cidx = np.delete(self._cidx, idx_list)
-        else:
-            self._ridx = np.delete(self._ridx, idx_list)
-
-        mat = copy.deepcopy(self._mat)
-        filtered = np.delete(mat, idx_list, axis=(1 if cols else 0))
-        self.nrows = filtered.shape[0]
-        self.ncols = filtered.shape[1]
-        self._mat = filtered
 
     # ------ sort operations
 
     def sort_by_metric(self, sorting_metric=lambda row: sum(row)) -> None:
-        """Sorts a MSA binary matrix by the given function that works on a binary list."""
-        # TODO: now redundant. remove?
+        """Sorts the rows of an MSA binary matrix by the given binary list-comparing sorting function."""
         print("\n-- OP: sorting MSA rows.")
-        mat = copy.deepcopy(self._mat)
-        sorting_metrics = np.apply_along_axis(sorting_metric, axis=1, arr=mat)
-
-        # TODO: update index lists!
-        sorted_indices = np.argsort(sorting_metrics)
-        sorted_matrix = mat[sorted_indices]
-
-        self._mat = sorted_matrix
+        # # TODO: update index lists!
+        self._mat = sort_by_metric(self._mat, sorting_metric)
         if gc.DISPLAY: self.visualize("Rows sorted")
         self._post_op()
 
     # ------ image processing
 
     def img_process(self, img_fun, *args, **kwargs) -> None:
-        """Process the alignment by passing the current alignment matrix/image into the given image processing
-        function."""
+        """Process the alignment by passing the current alignment matrix into the given image processing function."""
         mat = img_fun(img=self._mat, *args, **kwargs)
         self._mat = mat
         self._post_op()
 
     # ------ cluster operations, constructs implicit phylogenetic tree
 
-    def get_linkage_mat(self, cmethod: str = "complete") -> np.array:
+    def get_linkage_mat(self, cmethod: str = "complete", force: bool = False) -> np.array:
+        """Returns a linkage matrix created by means of the given distance metric."""
+        # TODO: cache the linkage_mat somehow
         distance_matrix = pdist(self._mat, metric='hamming')
         linkage_mat = linkage(distance_matrix, method=cmethod)
         return linkage_mat
 
     def linkage_cluster(self, dendogram_cut_height: float = 0.5) -> None:
-        """Clusters a MSA by some method.
-        The Result is a number of clusters and their assigned sequences? Or positions, to directly identify domains?
-        """
+        """Clusters a MSA by some method, extracts consensus clusters."""
         print("\n-- OP: Linkage clustering.")
         linkage_mat = self.get_linkage_mat()
         if gc.DISPLAY: visualize_clusters(self._mat, linkage_mat)
@@ -276,6 +227,7 @@ class MultiSeqAlignment:
     # -------- helper/debug
 
     def print_msa(self, n) -> None:
+        """Fetches n entries from the MSA file and prints certain values."""
         if self._filename == "": return
         if n < 1: return
         i = 0
@@ -300,21 +252,9 @@ class MultiSeqAlignment:
         addstr = "" if title_addon == "" else f": {title_addon}"
         show(self._mat, f"MSA{addstr} (1 seq/row, white=gap{aligned_str})")
 
-    def get_mat_visualization(self, hide_empty_cols: bool = False, reorder_rows: bool = False,
-                              max_row_width: int = -1) -> Figure:
-        if not self.initialized or self._mat is None:
-            print("Matrix not initialized; cannot visualize.")
-            return
-        mat = self._mat
-        if hide_empty_cols:
-            mat = copy.deepcopy(self._mat)
-            mat = remove_empty_cols(mat)
-        if reorder_rows:
-            mat = sort_by_metric(mat)
-
-        return show(mat, "", max_row_width)
 
     def get_mat(self, hide_empty_cols: bool = False, reorder_rows: bool = False) -> np.array:
+        """Creates a copy of the matrix, hides empty columns and reorders rows if specified, then returns it."""
         if not self.initialized or self._mat is None:
             print("Matrix not initialized; cannot visualize.")
             return
@@ -322,12 +262,11 @@ class MultiSeqAlignment:
         if hide_empty_cols:
             mat = remove_empty_cols(mat)
         if reorder_rows:
-            print("Reordering rows..")
             mat = sort_by_metric(mat)
         return mat
 
     def save_to_file(self, filename: str) -> None:
-        """Saves the final alignment image as well as the identified proteoform positions."""
+        """Saves the final alignment image as well as the identified proteoform information."""
         imgsave(self._mat, filename)
         print(
             f"Wrote filtered alignment image to file out/{filename}.png")  # TODO: save annotated image to file  #

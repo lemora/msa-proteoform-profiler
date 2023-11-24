@@ -1,27 +1,27 @@
-import copy
-
 from msapp.model.msa import MultiSeqAlignment
 from msapp.view.msapp_gui import App
 from msapp.model.mat_manipulation import cross_convolve
 
-from msapp.view.visualization import create_dendogram, create_dendrogram_height_cluster_count_plot, show_as_subimages, \
-    create_resized_mat_visualization, create_cluster_consensus_visualization, get_emply_plot
+from msapp.view.visualization import create_cluster_consensus_visualization, \
+    create_dendrogram_height_cluster_count_plot, create_resized_mat_visualization, get_empty_plot, show_as_subimages, \
+    visualize_dendrogram
 
 
 class Controller:
     """Manages the model (data) and view (GUI). It passes input and state changes between the two."""
 
     def __init__(self):
-        """Constructor."""
         self.msa = None
         self.gui = None
-        self.msa_changed = True  # dirty flag for msa visualization
-        self.dendro_changed = True  # dirty flag for dendrogram visualization
-        self.consensus_changed = True
-        self.dclustercount_changed = True
 
         self.hide_empty_cols = False
         self.reorder_rows = False
+
+        # dirty flags for visualizations that need to be refreshed
+        self.msa_changed = True
+        self.dendro_changed = True
+        self.consensus_changed = True
+        self.dclustercount_changed = True
 
     def start(self):
         """Starts the GUI."""
@@ -30,7 +30,8 @@ class Controller:
             self.gui.mainloop()
 
     def initialize_from_file(self, filename: str):
-        """Creates and initializes a msa object from a given file name and if successful, shows it in the GUI."""
+        """Creates and initializes a MultiSeqAlignment object from a given file name and if successful,
+        shows the corresponding plots in the GUI."""
         try:
             msa = MultiSeqAlignment(filename)
         except Exception as e:
@@ -45,8 +46,8 @@ class Controller:
             self.gui.add_to_textbox(f"Sucessfully loaded MSA from file '{fname_truncated}'.\n")
 
             # reset consensus and dclust plots
-            self.gui.show_consensus(get_emply_plot())
-            self.gui.show_dendro_clustercount(get_emply_plot())
+            self.gui.show_consensus(get_empty_plot())
+            self.gui.show_dendro_clustercount(get_empty_plot())
             self.msa_changed = True
             self.dendro_changed = True
             self.consensus_changed = True
@@ -56,15 +57,8 @@ class Controller:
             return False
         return True
 
-    def cross_convolve_mat(self):
-        if not self.is_mat_initialized(): return
-        col_size = 5
-        self.msa.img_process(cross_convolve, col_size=col_size)
-        self.gui.add_to_textbox(f"Convolving with {col_size}x{col_size} cross-kernel (1x{col_size}).")
-        self.msa_changed = True
-        self.dendro_changed = True
-
     def run_filtering_pipeline(self):
+        """Triggers running a matrix filtering pipeline on the MultiSeqAlignment object."""
         if not self.is_mat_initialized(): return
         self.gui.add_to_textbox("Running filtering pipeline.")
         self.msa.filter_by_length_statistic()
@@ -90,6 +84,7 @@ class Controller:
         self.msa_changed = True
 
     def on_show_msa_mat(self, force: bool = False):
+        """Controller is ordered to fetch an MSA matrix visualization figure and forward it to the GUI."""
         if not self.is_mat_initialized(): return
         if not force and not self.msa_changed: return
 
@@ -102,15 +97,16 @@ class Controller:
             self.msa_changed = False
 
     def on_show_dendrogram(self, force: bool = False):
+        """Controller is ordered to fetch a dendrogram visualization figure and forward it to the GUI."""
         if not self.is_mat_initialized(): return
         if not force and not self.dendro_changed: return
 
-        fig = create_dendogram(self.msa.get_linkage_mat())
-        # fig = create_dendogram_height_cluster_count_plot(self.msa.get_linkage_mat())
+        fig = visualize_dendrogram(self.msa.get_linkage_mat())
         self.gui.show_dendrogram(fig)
         self.dendro_changed = False
 
     def on_show_consensus(self, force: bool = False):
+        """Controller is ordered to fetch a consensus sequence visualization figure and forward it to the GUI."""
         if not self.is_mat_initialized(): return
         if not force and not self.consensus_changed: return
 
@@ -120,6 +116,7 @@ class Controller:
         self.consensus_changed = False
 
     def on_show_dendro_clustercount(self, force: bool = False):
+        """Controller is ordered to fetch a cluster per dendrogram height plot figure and forward it to the GUI."""
         if not self.is_mat_initialized(): return
         if not force and not self.dclustercount_changed: return
 

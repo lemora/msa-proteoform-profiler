@@ -1,5 +1,4 @@
 import copy
-
 import cv2
 import numpy as np
 
@@ -9,8 +8,8 @@ from msapp.view.visualization import show_pre_post
 
 # ----------------- mat manipulation and plotting preparation
 
-def filter_by_reference(mat, idx: int) -> None:
-    """Filters the alignment matrix by a given row in that MSA. Final step, visualization purposes."""
+def filter_by_reference(mat, idx: int) -> np.array:
+    """Filters the alignment matrix by a given row in that MSA for visualization purposes."""
     if idx >= mat.shape[0]: raise ValueError("The index needs to be smaller than the number of rows.")
     if gc.VERBOSE: print(f"\n-- OP: Filter by reference with index {idx}")
 
@@ -20,11 +19,12 @@ def filter_by_reference(mat, idx: int) -> None:
     return filtered
 
 
-def remove_empty_cols(mat):
+def remove_empty_cols(mat) -> np.array:
     """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
     if gc.VERBOSE: print("\n-- OP: Removing empty columns.")
     empty_columns = np.where(np.all(mat == 1, axis=0))[0]
     filtered = remove_seqs_from_alignment(mat, empty_columns, cols=True)
+    if gc.VERBOSE: print(f"Removed {len(empty_columns)} empty columns")
     return filtered
 
 
@@ -34,14 +34,13 @@ def remove_seqs_from_alignment(mat, idx_list: np.ndarray[int], cols: bool = True
     if len(idx_list) == 0: return mat
     max_idx = mat.shape[1] if cols else mat.shape[0]
     if min(idx_list) < 0 or max(idx_list) >= max_idx:
-        raise ValueError("The indices o delete must be between 0 and max row or col count.")
+        raise ValueError("The indices to delete must be between 0 and max row or col count.")
 
-    # mat = copy.deepcopy(mat)
     filtered = np.delete(mat, idx_list, axis=(1 if cols else 0))
     return filtered
 
 
-def sort_by_metric(mat, sorting_metric=lambda row: sum(row)) -> None:
+def sort_by_metric(mat, sorting_metric=lambda row: sum(row)) -> np.array:
     """Sorts a MSA binary matrix by the given function that works on a binary list."""
     sorting_metrics = np.apply_along_axis(sorting_metric, axis=1, arr=mat)
     sorted_indices = np.argsort(sorting_metrics)
@@ -51,7 +50,7 @@ def sort_by_metric(mat, sorting_metric=lambda row: sum(row)) -> None:
 
 # ----------------- classic image processing, mainly convolution
 
-def blur(img: np.array, ksize=9, show=None):
+def blur(img: np.array, ksize=9, show=None) -> np.array:
     """Blur image."""
     print(f"\n-- OP: Blur ({ksize}x{ksize} kernel)")
     show = show if show is not None else gc.DISPLAY
@@ -61,7 +60,7 @@ def blur(img: np.array, ksize=9, show=None):
     return processed
 
 
-def gaussian_blur(img: np.array, ksize=5, show=None):
+def gaussian_blur(img: np.array, ksize=5, show=None) -> np.array:
     """Gaussian blur image."""
     print(f"\n-- OP: Gaussian blur ({ksize}x{ksize} kernel)")
     show = show if show is not None else gc.DISPLAY
@@ -71,7 +70,7 @@ def gaussian_blur(img: np.array, ksize=5, show=None):
     return processed
 
 
-def median_blur(img: np.array, ksize=5, show=None):
+def median_blur(img: np.array, ksize=5, show=None) -> np.array:
     """Median blur image."""
     print(f"\n-- OP: Median blur ({ksize}x{ksize} kernel)")
     show = show if show is not None else gc.DISPLAY
@@ -81,7 +80,7 @@ def median_blur(img: np.array, ksize=5, show=None):
     return processed
 
 
-def dilate_erode(img: np.array, ksize=5, show=None):
+def dilate_erode(img: np.array, ksize=5, show=None) -> np.array:
     """Dilate, then erode image."""
     print(f"\n-- OP: Dilate/erode ({ksize}x{ksize} kernel)")
     show = show if show is not None else gc.DISPLAY
@@ -92,7 +91,7 @@ def dilate_erode(img: np.array, ksize=5, show=None):
     return processed
 
 
-def cross_convolve(img: np.array, row_size: int = 1, col_size: int = 3, show=None):
+def cross_convolve(img: np.array, row_size: int = 1, col_size: int = 3, show=None) -> np.array:
     """Convolves with a cross-shaped kernel with row_size ones on the center row and col_size 1s on the center
     column."""
     ksize = max(row_size, col_size)
@@ -108,7 +107,7 @@ def cross_convolve(img: np.array, row_size: int = 1, col_size: int = 3, show=Non
     return processed
 
 
-def create_cross_kernel(row_size: int = 1, col_size: int = 3):
+def create_cross_kernel(row_size: int = 1, col_size: int = 3) -> np.array:
     """Creates a kernel of size max(row_size, col_size), that is zero everywhere except for the center column and row.
     param row_size: hom many centered 1s to have on the center row
     param col_size: hom many centered 1s to have on the center column
@@ -140,17 +139,15 @@ def create_cross_kernel(row_size: int = 1, col_size: int = 3):
 
 # ----------------- pre/post formatting
 
-def to_binary_matrix(img: np.array):
+def to_binary_matrix(img: np.array) -> np.array:
     """Makes sure that after image processing the contained values are binary again: 0 or 1."""
     mat = copy.deepcopy(img)
     minval = np.min(mat)
-    # print(f"Min matrix val: {minval}")
     if minval < 0:
         print(f"Min matrix entry: {minval} < 0!")
         mat = mat - minval
 
     maxval = np.max(mat)
-    # print(f"Max matrix val: {maxval}")
     if maxval <= 0:
         print(f"Max matrix entry {maxval} <= 0!")
     elif maxval != 1:
@@ -161,6 +158,4 @@ def to_binary_matrix(img: np.array):
     if gc.VERBOSE:
         print(f"After mat binarization, min: {np.min(mat)}, max: {np.max(mat)}")
 
-    # print(mat)
-    # print(f"Sum of values in mat: {sum(mat)}")
     return mat

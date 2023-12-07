@@ -6,7 +6,7 @@
 
 ### Dependencies
 
-We use python 3.11 and [poetry](https://github.com/python-poetry/poetry) 1.6.1.
+This software requires python >=3.9 and [poetry](https://github.com/python-poetry/poetry).
 All package versions are managed by poetry.
 
 ### Running/Testing

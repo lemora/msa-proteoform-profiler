@@ -1,7 +1,7 @@
 import copy
 import numpy as np
-from pysam import FastxFile
-import re
+
+from Bio.SeqIO.FastaIO import SimpleFastaParser
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import pdist
 from scipy.stats import mode
@@ -51,36 +51,28 @@ class MultiSeqAlignment:
 
         # Create a binary matrix from the multiple sequence alignment file
         msa_mat = []
-        min_rlen = -1
-        max_rlen = -1
-        with FastxFile(filename) as fh:
-            for entry in fh:
-                seq = entry.sequence
-                if not re.match("^[A-Za-z-]*$", seq):
-                    err_msg = f"Could not load MSA; a line does not match the expected pattern.\n"
+        entry_length = -1
+        with open(filename) as fh:
+            for entry in SimpleFastaParser(handle=fh):
+                # if gc.VERBOSE: print("entry:", entry[0])
+                seq = entry[1]
+                rlen = len(seq)
+                if entry_length == -1:
+                    entry_length = rlen
+                elif rlen != entry_length:
+                    err_msg = "The fasta sequences are not equally long, this in not a valid alignment file.\n"
                     print(err_msg)
                     raise ValueError(err_msg)
+
                 the_row = []
-                rlen = len(seq)
-                if min_rlen == -1 or rlen < min_rlen:
-                    min_rlen = rlen
-                if max_rlen == -1 or rlen > max_rlen:
-                    max_rlen = rlen
                 for letter in seq:
                     the_row.append(0 if letter.isalpha() else 1)  # the_row = np.array(the_row, dtype=np.uint8)
                 if len(the_row) > 0:
                     msa_mat.append(the_row)
-            fh.close()
 
         if msa_mat == None or len(msa_mat) == 0:
             print("Could not initialize MSA object from the given fasta file.\n")
             return False
-
-        print(f"MSA mat. min len: {min_rlen}, max len: {max_rlen}")
-        if min_rlen != max_rlen:
-            err_msg = "The fasta sequences are not equally long, this in not a valid alignment file.\n"
-            print(err_msg)
-            raise ValueError(err_msg)
 
         self._filename: str = filename
         msa_mat = np.array(msa_mat, dtype=np.uint8)
@@ -231,15 +223,12 @@ class MultiSeqAlignment:
         if self._filename == "": return
         if n < 1: return
         i = 0
-        with FastxFile(self._filename) as fh:
-            for entry in fh:
-                print(f"name: {entry.name}")
-                print(f"seq: {entry.sequence}")
-                print(f"comment: {entry.comment}")
-                print(f"quality: {entry.quality}\n")
+        with open(self._filename) as fh:
+            for entry in SimpleFastaParser(handle=fh):
+                print("info:", entry[0])
+                print("seq:", entry[1])
                 i += 1
                 if i >= n: break
-            fh.close()
 
     # -------- output
 

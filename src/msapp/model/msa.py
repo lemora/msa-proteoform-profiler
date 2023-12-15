@@ -19,15 +19,12 @@ class MultiSeqAlignment:
         self.initialized = False
         self._filename = ""
         self._mat = None
+        self.seq_names = None
         self.nrows: int = -1
         self.ncols: int = -1
         self._ridx: np.array = []  # list of row indices
         self._cidx: np.array = []  # list of col indices
         self.linkage_mat = LinkageMat()
-
-        # self._filtered_by_reference: bool = False  # filtered
-        # self._filter_idx: int = -1  # index of the sequence by which the MSA has been filtered
-        self.nclusters: int = 3  # likely number of discovered isoforms. maybe later list ranked by likelihood?
 
         if filename is not None and filename != "":
             self.init_from_file(filename)
@@ -57,7 +54,6 @@ class MultiSeqAlignment:
         entry_length = -1
         with open(filename) as fh:
             for entry in SimpleFastaParser(handle=fh):
-                # if gc.VERBOSE: print("entry:", entry[0])
                 np.append(seq_names, entry[0])
                 seq = entry[1]
                 rlen = len(seq)
@@ -68,13 +64,8 @@ class MultiSeqAlignment:
                     print(err_msg)
                     raise ValueError(err_msg)
 
-                # the_row = []
-                # for letter in seq:
-                #     the_row.append(0 if letter.isalpha() else 1)  # the_row = np.array(the_row, dtype=np.uint8)
-
                 the_row = np.fromiter((0 if letter.isalpha() else 1 for letter in seq), dtype=np.uint8)
                 if len(the_row) > 0:
-                    # msa_mat.append(the_row)
                     msa_mat = np.vstack((msa_mat, the_row)) if msa_mat.size else the_row
 
         if not msa_mat.size or len(msa_mat) == 0:
@@ -150,9 +141,6 @@ class MultiSeqAlignment:
 
     def get_linkage_mat(self, cmethod: str = "complete") -> np.array:
         """Returns a linkage matrix created by means of the given distance metric."""
-        # TODO: cache the linkage_mat somehow
-        # distance_matrix = pdist(self._mat, metric='hamming')
-        # self.linkage_mat = linkage(distance_matrix, method=cmethod)
         return self.linkage_mat.get(self._mat, cmethod)
 
     def calc_consensus_clusters(self, perc_threshold: float):
@@ -166,8 +154,6 @@ class MultiSeqAlignment:
         if gc.DISPLAY: visualize_clusters(self._mat, linkage_mat)
 
         mat = self._mat
-        # mat = copy.deepcopy(self._mat)
-        # mat = remove_empty_cols(mat)
         max_val = max(linkage_mat[:, 2])
         dist_threshold = perc_threshold * max_val
         if gc.VERBOSE: print(
@@ -182,7 +168,6 @@ class MultiSeqAlignment:
             cluster_indices = np.where(cluster_labels == i)[0]
             cluster_data = mat[cluster_indices]
             cseq = mode(cluster_data, axis=0).mode
-            # cseq.append(list(consensus_sequence))
             consensus_list = np.vstack((consensus_list, cseq)) if consensus_list.size else cseq
 
         if gc.DISPLAY: create_cluster_consensus_visualization(consensus_list)

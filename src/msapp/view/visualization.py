@@ -135,7 +135,8 @@ def create_cluster_consensus_visualization(consensus_sequences: list[list]):
     """Shows the consensus of a number of sequence clusters based on similarity."""
     sorted_cseqs = consensus_sequences
     num_blocks = len(sorted_cseqs)
-    rows_per_block = int(500 / num_blocks)
+    row_len = len(sorted_cseqs[0])
+    rows_per_block = int(row_len/ (3 * num_blocks))
 
     subimages = []
     for cseq in sorted_cseqs:

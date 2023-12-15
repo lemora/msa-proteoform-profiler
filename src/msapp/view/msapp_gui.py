@@ -20,8 +20,8 @@ class App(customtkinter.CTk):
         self.bind("<Configure>", self.on_resizing)
 
         self.title("MSA Proteoform Profiler")
-        self.geometry(f"{1400}x{900}")
-        self.minsize(width=1400, height=900)
+        self.geometry(f"{1200}x{700}")
+        self.minsize(width=1200, height=700)
 
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)

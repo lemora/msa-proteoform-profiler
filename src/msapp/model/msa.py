@@ -23,8 +23,10 @@ class MultiSeqAlignment:
         self.ncols: int = -1
         self._ridx: np.array = []  # list of row indices
         self._cidx: np.array = []  # list of col indices
-        self._filtered_by_reference: bool = False  # filtered
-        self._filter_idx: int = -1  # index of the sequence by which the MSA has been filtered
+        self.linkage_mat = LinkageMat()
+
+        # self._filtered_by_reference: bool = False  # filtered
+        # self._filter_idx: int = -1  # index of the sequence by which the MSA has been filtered
         self.nclusters: int = 3  # likely number of discovered isoforms. maybe later list ranked by likelihood?
 
         if filename is not None and filename != "":
@@ -50,11 +52,13 @@ class MultiSeqAlignment:
         if self.initialized: raise ValueError("The MSA object has already been initialized.\n")
 
         # Create a binary matrix from the multiple sequence alignment file
-        msa_mat = []
+        msa_mat = np.array([])
+        seq_names = np.array([])
         entry_length = -1
         with open(filename) as fh:
             for entry in SimpleFastaParser(handle=fh):
                 # if gc.VERBOSE: print("entry:", entry[0])
+                np.append(seq_names, entry[0])
                 seq = entry[1]
                 rlen = len(seq)
                 if entry_length == -1:
@@ -64,17 +68,21 @@ class MultiSeqAlignment:
                     print(err_msg)
                     raise ValueError(err_msg)
 
-                the_row = []
-                for letter in seq:
-                    the_row.append(0 if letter.isalpha() else 1)  # the_row = np.array(the_row, dtype=np.uint8)
-                if len(the_row) > 0:
-                    msa_mat.append(the_row)
+                # the_row = []
+                # for letter in seq:
+                #     the_row.append(0 if letter.isalpha() else 1)  # the_row = np.array(the_row, dtype=np.uint8)
 
-        if msa_mat == None or len(msa_mat) == 0:
+                the_row = np.fromiter((0 if letter.isalpha() else 1 for letter in seq), dtype=np.uint8)
+                if len(the_row) > 0:
+                    # msa_mat.append(the_row)
+                    msa_mat = np.vstack((msa_mat, the_row)) if msa_mat.size else the_row
+
+        if not msa_mat.size or len(msa_mat) == 0:
             print("Could not initialize MSA object from the given fasta file.\n")
             return False
 
         self._filename: str = filename
+        self.seq_names = seq_names
         msa_mat = np.array(msa_mat, dtype=np.uint8)
         self._mat = msa_mat
         self.nrows = msa_mat.shape[0]
@@ -105,6 +113,7 @@ class MultiSeqAlignment:
         self._mat = remove_seqs_from_alignment(self._mat, idx_list=seqs_over_three_std, cols=False)
         self.nrows = self._mat.shape[0]
         self.ncols = self._mat.shape[1]
+        self.linkage_mat.mat_changed()
 
         if gc.DISPLAY: self.visualize(rf"Removed {len(seqs_over_three_std)} seqs > 3 $\sigma$ length")
         self._post_op()
@@ -134,35 +143,31 @@ class MultiSeqAlignment:
         """Process the alignment by passing the current alignment matrix into the given image processing function."""
         mat = img_fun(img=self._mat, *args, **kwargs)
         self._mat = mat
+        self.linkage_mat.mat_changed()
         self._post_op()
 
     # ------ cluster operations, constructs implicit phylogenetic tree
 
-    def get_linkage_mat(self, cmethod: str = "complete", force: bool = False) -> np.array:
+    def get_linkage_mat(self, cmethod: str = "complete") -> np.array:
         """Returns a linkage matrix created by means of the given distance metric."""
         # TODO: cache the linkage_mat somehow
-        distance_matrix = pdist(self._mat, metric='hamming')
-        linkage_mat = linkage(distance_matrix, method=cmethod)
-        return linkage_mat
+        # distance_matrix = pdist(self._mat, metric='hamming')
+        # self.linkage_mat = linkage(distance_matrix, method=cmethod)
+        return self.linkage_mat.get(self._mat, cmethod)
 
-    def linkage_cluster(self, dendogram_cut_height: float = 0.5) -> None:
-        """Clusters a MSA by some method, extracts consensus clusters."""
-        print("\n-- OP: Linkage clustering.")
-        linkage_mat = self.get_linkage_mat()
-        if gc.DISPLAY: visualize_clusters(self._mat, linkage_mat)
-
-        self.calc_consensus_clusters(linkage_mat, perc_threshold=dendogram_cut_height)
-        self._post_op()
-
-    def calc_consensus_clusters(self, linkage_mat: np.array, perc_threshold: float):
+    def calc_consensus_clusters(self, perc_threshold: float):
         """Calculate clusters based on relative similarity in dendrogram and a consensus sequence (average) per cluster.
         arg perc_threshold: relative dendrogram height to cut at (0 to 1), where 1 is the root (one cluster),
         0 the leaves (one cluster for every distinct row)"""
         if perc_threshold < 0 or perc_threshold > 1: raise ValueError(
             "The dendrogram cut height must be between 0 and 1.")
 
-        mat = copy.deepcopy(self._mat)
-        mat = remove_empty_cols(mat)
+        linkage_mat = self.get_linkage_mat()
+        if gc.DISPLAY: visualize_clusters(self._mat, linkage_mat)
+
+        mat = self._mat
+        # mat = copy.deepcopy(self._mat)
+        # mat = remove_empty_cols(mat)
         max_val = max(linkage_mat[:, 2])
         dist_threshold = perc_threshold * max_val
         if gc.VERBOSE: print(
@@ -172,12 +177,13 @@ class MultiSeqAlignment:
         nclusters = len(set(cluster_labels))
         if gc.VERBOSE: print(f"Clustering, n discovered: {nclusters}")
 
-        consensus_list = []
+        consensus_list = np.array([])
         for i in range(1, nclusters + 1):
             cluster_indices = np.where(cluster_labels == i)[0]
             cluster_data = mat[cluster_indices]
-            consensus_sequence = mode(cluster_data, axis=0).mode
-            consensus_list.append(list(consensus_sequence))
+            cseq = mode(cluster_data, axis=0).mode
+            # cseq.append(list(consensus_sequence))
+            consensus_list = np.vstack((consensus_list, cseq)) if consensus_list.size else cseq
 
         if gc.DISPLAY: create_cluster_consensus_visualization(consensus_list)
         return consensus_list
@@ -260,3 +266,33 @@ class MultiSeqAlignment:
         print(
             f"Wrote filtered alignment image to file out/{filename}.png")  # TODO: save annotated image to file  #
         # TODO: invent file format and save proteoforms + meta information
+
+
+class LinkageMat:
+    """Class that caches a linkage matrix of given type to avoid unnecessary recalculations."""
+
+    def __init__(self) -> None:
+        """Constructor."""
+        self.dist_mat = None
+        self.dmat_changed = True
+        self.link_mat = None
+        self.link_cmethod = ""
+
+    def mat_changed(self):
+        self.dmat_changed = True
+
+    def get(self, mat: np.ndarray, cmethod: str):
+        """Returns the distance matrix for the given mat."""
+        lmat_changed = False
+        if self.dmat_changed:
+            if gc.VERBOSE: print("Calculating distance matrix")
+            self.dst_mat = pdist(mat, metric='hamming')
+            self.dmat_changed =  False
+            lmat_changed = True
+
+        if lmat_changed or self.link_cmethod != cmethod:
+            if gc.VERBOSE: print("Calculating linkage matrix")
+            self.link_mat = linkage(self.dst_mat, method=cmethod)
+            self.link_cmethod =  cmethod
+        return self.link_mat
+

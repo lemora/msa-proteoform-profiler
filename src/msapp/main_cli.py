@@ -66,6 +66,4 @@ def run() -> None:
     if p.reorder:
         msa.sort_by_metric(sorting_metric=sort_by)
 
-    msa.linkage_cluster(p.cut_height_dendrogram)
-
     if p.save: msa.save_to_file("proteoform-img")

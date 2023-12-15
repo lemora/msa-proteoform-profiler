@@ -110,7 +110,7 @@ class Controller:
         if not self.is_mat_initialized(): return
         if not force and not self.consensus_changed: return
 
-        consensus_clusters = self.msa.calc_consensus_clusters(self.msa.get_linkage_mat(), perc_threshold=0.7)
+        consensus_clusters = self.msa.calc_consensus_clusters(perc_threshold=0.7)
         fig = create_cluster_consensus_visualization(consensus_clusters)
         self.gui.show_consensus(fig)
         self.consensus_changed = False

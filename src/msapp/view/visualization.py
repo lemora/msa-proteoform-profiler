@@ -63,7 +63,7 @@ def show_as_subimages(mat, title: str) -> Figure:
 
     figure = plt.figure(figsize=(8, 8))
     figure.subplots()
-    plt.imshow(mat, cmap="gray"), plt.title(f"{title} [{mat.shape[0]}x{mat.shape[1]}]")
+    plt.imshow(mat, cmap="gray") #, plt.title(f"{title} [{mat.shape[0]}x{mat.shape[1]}]")
     plt.xticks([]), plt.yticks([])
     plt.xlabel("Position in aligned sequence")
     plt.ylabel("Sequence number")
@@ -136,7 +136,7 @@ def create_cluster_consensus_visualization(consensus_sequences: list[list]):
     sorted_cseqs = consensus_sequences
     num_blocks = len(sorted_cseqs)
     row_len = len(sorted_cseqs[0])
-    rows_per_block = int(row_len/ (3 * num_blocks))
+    rows_per_block = int(row_len/ (3.5 * num_blocks))
 
     subimages = []
     for cseq in sorted_cseqs:
@@ -146,9 +146,9 @@ def create_cluster_consensus_visualization(consensus_sequences: list[list]):
     concat_img = np.vstack(subimages)
 
     fig, ax = plt.subplots()
-    plt.subplot(), plt.imshow(concat_img, cmap="gray"), plt.title(f"Consensus of {num_blocks} sequence clusters")
+    plt.subplot(), plt.imshow(concat_img, cmap="gray")#, plt.title(f"Consensus of {num_blocks} sequence clusters")
     plt.xticks([]), plt.yticks([])
-    plt.xlabel("Position in gapless aligned sequence")
+    plt.xlabel("Position in aligned sequence")
     plt.ylabel("Clusters")
     if gc.DISPLAY: plt.show()
     return fig
@@ -170,7 +170,7 @@ def visualize_clustermap(mat, linkage_mat) -> Figure:
     return g.fig
 
 
-def visualize_dendrogram(linkage_mat, dheight: float = 0.7) -> Figure:
+def visualize_dendrogram(linkage_mat, dheight: float = 0.75) -> Figure:
     """Creates a dendrogram visualization of a matrix and a corresponding linkage matrix. Colors the trees differently
     that start below a certain significant height (0<=dheight<=1) + adds a horizontal line for clarity."""
     if dheight < 0.0 or dheight > 1.0:
@@ -185,12 +185,12 @@ def visualize_dendrogram(linkage_mat, dheight: float = 0.7) -> Figure:
     ax.set_yticks(y, labels=ylabels)
     plt.xticks([])
     plt.xlabel("Aligned sequences reordered by similarity")
-    plt.ylabel("Branching by similarity")
+    plt.ylabel("Branching by sequence similarity")
     if gc.DISPLAY: plt.show()
     return fig
 
 
-def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.7):
+def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.75):
     """Creates a line plot based on a given linkage matrix and corresponding dendrogram, which shows the number of
     clusters per normalized height ([0: leaves, 1: root])."""
     max_distance = linkage_mat[:, 2].max()

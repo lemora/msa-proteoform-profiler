@@ -16,6 +16,7 @@ class Controller:
 
         self.hide_empty_cols = False
         self.reorder_rows = False
+        self.dendro_hcutoff = 0.75
 
         # dirty flags for visualizations that need to be refreshed
         self.msa_changed = True
@@ -83,6 +84,14 @@ class Controller:
         self.reorder_rows = should_reorder
         self.msa_changed = True
 
+    def set_dendro_hcutoff(self, dendro_hcutoff: float):
+        if self.dendro_hcutoff == dendro_hcutoff:
+            return
+        self.dendro_hcutoff = dendro_hcutoff
+        self.dendro_changed = True
+        self.consensus_changed = True
+        self.dclustercount_changed = True
+
     def on_show_msa_mat(self, force: bool = False):
         """Controller is ordered to fetch an MSA matrix visualization figure and forward it to the GUI."""
         if not self.is_mat_initialized(): return
@@ -101,7 +110,7 @@ class Controller:
         if not self.is_mat_initialized(): return
         if not force and not self.dendro_changed: return
 
-        fig = visualize_dendrogram(self.msa.get_linkage_mat())
+        fig = visualize_dendrogram(self.msa.get_linkage_mat(), self.dendro_hcutoff)
         self.gui.show_dendrogram(fig)
         self.dendro_changed = False
 
@@ -110,7 +119,9 @@ class Controller:
         if not self.is_mat_initialized(): return
         if not force and not self.consensus_changed: return
 
-        consensus_clusters = self.msa.calc_consensus_clusters(perc_threshold=0.7)
+        consensus_clusters = self.msa.calc_consensus_clusters(perc_threshold=self.dendro_hcutoff)
+        nclusters = len(consensus_clusters)
+        self.gui.set_cluster_count(nclusters)
         fig = create_cluster_consensus_visualization(consensus_clusters)
         self.gui.show_consensus(fig)
         self.consensus_changed = False
@@ -120,6 +131,6 @@ class Controller:
         if not self.is_mat_initialized(): return
         if not force and not self.dclustercount_changed: return
 
-        fig = create_dendrogram_height_cluster_count_plot(self.msa.get_linkage_mat())
+        fig = create_dendrogram_height_cluster_count_plot(self.msa.get_linkage_mat(), self.dendro_hcutoff)
         self.gui.show_dendro_clustercount(fig)
         self.consensus_changed = False

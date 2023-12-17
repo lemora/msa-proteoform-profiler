@@ -143,7 +143,7 @@ class MultiSeqAlignment:
         """Returns a linkage matrix created by means of the given distance metric."""
         return self.linkage_mat.get(self._mat, cmethod)
 
-    def calc_consensus_clusters(self, perc_threshold: float):
+    def calc_consensus_clusters(self, perc_threshold: float = 0.75):
         """Calculate clusters based on relative similarity in dendrogram and a consensus sequence (average) per cluster.
         arg perc_threshold: relative dendrogram height to cut at (0 to 1), where 1 is the root (one cluster),
         0 the leaves (one cluster for every distinct row)"""
@@ -171,6 +171,8 @@ class MultiSeqAlignment:
             consensus_list = np.vstack((consensus_list, cseq)) if consensus_list.size else cseq
 
         if gc.DISPLAY: create_cluster_consensus_visualization(consensus_list)
+        if nclusters == 1:
+            consensus_list = [consensus_list]
         return consensus_list
 
     # -------- analysis/metrics
@@ -228,9 +230,8 @@ class MultiSeqAlignment:
         if not self.initialized or self._mat is None:
             print("Matrix not initialized; cannot visualize.")
             return
-        aligned_str = "" if self._filter_idx == -1 else f", ref. row {self._filter_idx}"
         addstr = "" if title_addon == "" else f": {title_addon}"
-        show(self._mat, f"MSA{addstr} (1 seq/row, white=gap{aligned_str})")
+        show(self._mat, f"MSA{addstr} (1 seq/row, white=gap)")
 
 
     def get_mat(self, hide_empty_cols: bool = False, reorder_rows: bool = False) -> np.array:

@@ -4,6 +4,7 @@ import customtkinter
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+from typing import Union, Callable
 
 customtkinter.set_appearance_mode("System")
 customtkinter.set_default_color_theme("blue")
@@ -20,7 +21,7 @@ class App(customtkinter.CTk):
         self.bind("<Configure>", self.on_resizing)
 
         self.title("MSA Proteoform Profiler")
-        self.geometry(f"{1200}x{700}")
+        self.geometry(f"{1400}x{900}")
         self.minsize(width=1200, height=700)
 
         # configure grid layout (4x4)
@@ -78,7 +79,7 @@ class App(customtkinter.CTk):
         fig.set_tight_layout(True)
         fig.set_figheight(4)
         ax.axis("off")
-        self.canvas_mat = FigureCanvasTkAgg(fig, master=self.mat_display_frame)
+        self.canvas_mat = FigureCanvasTkAgg(fig, self.mat_display_frame)
         self.canvas_mat.draw()
         self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
 
@@ -96,7 +97,7 @@ class App(customtkinter.CTk):
         fig.set_tight_layout(True)
         fig.set_figheight(4)
         ax.axis("off")
-        self.canvas_consensus = FigureCanvasTkAgg(fig, master=self.consensus_frame)
+        self.canvas_consensus = FigureCanvasTkAgg(fig, self.consensus_frame)
         self.canvas_consensus.draw()
         self.canvas_consensus.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
 
@@ -126,7 +127,7 @@ class App(customtkinter.CTk):
         fig.set_tight_layout(True)
         fig.set_figheight(4)
         ax.axis("off")
-        self.canvas_dendro = FigureCanvasTkAgg(fig, master=self.dendrogram_display_frame)
+        self.canvas_dendro = FigureCanvasTkAgg(fig, self.dendrogram_display_frame)
         self.canvas_dendro.draw()
         self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
 
@@ -144,49 +145,99 @@ class App(customtkinter.CTk):
         fig.set_tight_layout(True)
         fig.set_figheight(4)
         ax.axis("off")
-        self.canvas_dendro_clustercount = FigureCanvasTkAgg(fig, master=self.dendrogram_clustercount_frame)
+        self.canvas_dendro_clustercount = FigureCanvasTkAgg(fig, self.dendrogram_clustercount_frame)
         self.canvas_dendro_clustercount.draw()
         self.canvas_dendro_clustercount.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
 
-        # ------ operations frame
+        # ------ options/operations frame
 
-        self.tabview = customtkinter.CTkTabview(self, width=250)
+        self.tabview = customtkinter.CTkTabview(self, width=280)
         self.tabview.grid(row=0, rowspan=2, column=2, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        self.tabview.add("Basic Operations")
-        self.tabview.add("Tab 2")
-        self.tabview.tab("Basic Operations").grid_columnconfigure(0, weight=1)
-        self.tabview.tab("Tab 2").grid_columnconfigure(0, weight=1)
+        self.tabview.add("Global")
+        self.tabview.add("SingleSeq")
+        self.tabview.tab("Global").configure(width=280)
+        self.tabview.tab("SingleSeq").configure(width=280)
+        self.tabview.tab("Global").grid_columnconfigure(0, weight=1)
+        self.tabview.tab("Global").grid_columnconfigure(1, weight=0)
+        self.tabview.tab("SingleSeq").grid_columnconfigure(0, weight=1)
+        self.tabview.tab("SingleSeq").grid_columnconfigure(1, weight=0)
 
-        # Tab 1
-        self.button_filter_msa = customtkinter.CTkButton(self.tabview.tab("Basic Operations"), text="Filter MSA",
-                                                         command=self.on_filter_msa)
-        self.button_filter_msa.grid(row=1, column=0, padx=20, pady=(10, 10))
+        # Tab 1: Global
 
-        # Tab 2
-        self.optionmenu_2 = customtkinter.CTkOptionMenu(self.tabview.tab("Tab 2"), dynamic_resizing=False,
-                                                        values=["Value 1", "Value 2", "Value 3"])
-        self.optionmenu_2.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.filter_msa_selector = customtkinter.CTkOptionMenu(self.tabview.tab("Global"), width=110,
+                                                     dynamic_resizing=False, values=["Standard", "Aggressive"])
+        self.filter_msa_selector.grid(row=0, column=0, padx=(10, 5), pady=(15, 0), sticky="nw")
 
-        # ------ info frame
+        self.button_filter_msa = customtkinter.CTkButton(self.tabview.tab("Global"), width=120,
+                                                         text="Filter MSA", command=self.on_filter_msa)
+        self.button_filter_msa.grid(row=0, column=1, padx=(0, 10), pady=(15, 0))
 
-        self.scrollable_frame = customtkinter.CTkScrollableFrame(self, label_text="Visualization")
-        self.scrollable_frame.grid(row=0, rowspan=2, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        self.scrollable_frame.grid_columnconfigure(0, weight=1)
+        # dendro cutoff spinbox
+        self.dendro_cutoff_spinbox = FloatSpinbox(self.tabview.tab("Global"), width=110, step_size=0.05,
+                                                                                    minval=0.25, maxval=1.0)
+        self.dendro_cutoff_spinbox.grid(row=1, column=0, padx=(10, 5), pady=(10, 0), sticky="nw")
+
+        self.button_dendro_hcutoff = customtkinter.CTkButton(self.tabview.tab("Global"), width=120, text="Use dendro cutoff",
+                                                         command=self.on_dendro_height_change)
+        self.button_dendro_hcutoff.grid(row=1, column=1, padx=(0, 10), pady=(10, 0))
+
+        # visualization checkboxes
         self.checkbox_var_hide_empty_cols = customtkinter.BooleanVar()
-        self.checkbox_hide_empty_cols = customtkinter.CTkCheckBox(master=self.scrollable_frame,
+        self.checkbox_hide_empty_cols = customtkinter.CTkCheckBox(self.tabview.tab("Global"),
                                                                   text="Hide empty columns",
                                                                   command=self.on_hide_empty_cols_switch,
                                                                   variable=self.checkbox_var_hide_empty_cols,
                                                                   onvalue=True, offvalue=False)
-        self.checkbox_hide_empty_cols.grid(row=1, column=0, pady=10, padx=(10, 10), sticky="nw")
+        self.checkbox_hide_empty_cols.grid(row=2, column=0, columnspan=2, pady=(20, 0), padx=(10, 10), sticky="nw")
 
         self.checkbox_var_reorder_mat_rows = customtkinter.BooleanVar()
-        self.checkbox_reorder_mat_rows = customtkinter.CTkCheckBox(master=self.scrollable_frame,
+        self.checkbox_reorder_mat_rows = customtkinter.CTkCheckBox(self.tabview.tab("Global"),
                                                                    text="Sort sequences",
                                                                    command=self.on_reorder_mat_rows_switch,
                                                                    variable=self.checkbox_var_reorder_mat_rows,
                                                                    onvalue=True, offvalue=False)
-        self.checkbox_reorder_mat_rows.grid(row=2, column=0, pady=10, padx=(10, 10), sticky="nw")
+        self.checkbox_reorder_mat_rows.grid(row=3, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
+
+
+        # Tab 2: SingleSeq
+
+        self.seq_selector = customtkinter.CTkOptionMenu(self.tabview.tab("SingleSeq"), width=110,
+                                                        dynamic_resizing=False, values=["-"])
+        self.seq_selector.grid(row=0, column=0, padx=(10, 5), pady=(15, 0), sticky="nw")
+
+        self.button_choose_seq = customtkinter.CTkButton(self.tabview.tab("SingleSeq"), width=120, text="Select Sequence",
+                                                         command=self.on_select_seq)
+        self.button_choose_seq.grid(row=0, column=1, padx=(0, 10), pady=(15, 0))
+
+        # selected sequence
+        self.selected_seq_label = customtkinter.CTkLabel(self.tabview.tab("SingleSeq"), text="Details:",
+                                                         font=customtkinter.CTkFont(size=15))
+        self.selected_seq_label.grid(row=1, column=0, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nw")
+        self.selected_seq_value = customtkinter.CTkLabel(self.tabview.tab("SingleSeq"), text="",
+                                                         font=customtkinter.CTkFont(size=15))
+        self.selected_seq_value.grid(row=3, column=0, padx=(10, 0), pady=(10, 0), sticky="nw")
+
+        # ------ info frame
+
+        self.scrollable_frame = customtkinter.CTkScrollableFrame(self, label_text="Info")
+        self.scrollable_frame.grid(row=0, rowspan=2, column=3, padx=(20, 20), pady=(37, 0), sticky="nsew")
+        self.scrollable_frame.grid_columnconfigure(0, weight=1)
+
+        # filter score
+        self.seq_count_label = customtkinter.CTkLabel(self.scrollable_frame, text="Sequence count:",
+                                                         font=customtkinter.CTkFont(size=15))
+        self.seq_count_label.grid(row=0, column=0, padx=(10, 0), pady=(10, 0), sticky="nw")
+        self.seq_count_value = customtkinter.CTkLabel(self.scrollable_frame, text="",
+                                                         font=customtkinter.CTkFont(size=15))
+        self.seq_count_value.grid(row=0, column=1, padx=(0, 10), pady=(10, 0), sticky="nw")
+
+        self.cluster_count_label = customtkinter.CTkLabel(self.scrollable_frame, text="Cluster count:",
+                                                      font=customtkinter.CTkFont(size=15))
+        self.cluster_count_label.grid(row=1, column=0, padx=(10, 0), pady=(5, 0), sticky="nw")
+        self.cluster_count_value = customtkinter.CTkLabel(self.scrollable_frame, text="",
+                                                      font=customtkinter.CTkFont(size=15))
+        self.cluster_count_value.grid(row=1, column=1, padx=(0, 10), pady=(5, 0), sticky="nw")
+
 
         # ------ textbox
 
@@ -194,21 +245,27 @@ class App(customtkinter.CTk):
         self.logging_frame.grid(row=2, rowspan=2, column=2, columnspan=2, padx=(20, 20), pady=(20, 20), sticky="nsew")
         self.logging_frame.grid_columnconfigure((0, 1), weight=1)
         self.logging_frame.grid_rowconfigure(0, weight=1)
-        self.textbox = customtkinter.CTkTextbox(master=self.logging_frame)
+        self.textbox = customtkinter.CTkTextbox(self.logging_frame)
         self.textbox.grid(row=0, column=0, columnspan=2, padx=(10, 10), pady=(10, 10), sticky="nsew")
 
         # ------ set default values
 
         self.appearance_mode_optionemenu.set("System")
-        self.optionmenu_2.set("Option Menu")
-
         self.sidebar_button_save.configure(state="disabled")
 
         self.button_filter_msa.configure(state="disabled")
         self.checkbox_hide_empty_cols.deselect()
         self.controller.hide_empty_cols = False
-        self.textbox.configure(state="disabled")
 
+        self.dendro_cutoff_spinbox.set_highlighted(0.75)
+        self.dendro_cutoff_spinbox.enable(False)
+        self.button_dendro_hcutoff.configure(state="disabled")
+
+        self.seq_selector.set("-")
+        self.seq_selector.configure(state="disabled")
+        self.button_choose_seq.configure(state="disabled")
+
+        self.textbox.configure(state="disabled")
         self.last_mat_frame_hwratio = 0
 
     # ------ general
@@ -242,14 +299,18 @@ class App(customtkinter.CTk):
     def on_load_file(self):
         filename = filedialog.askopenfilename(title="Select a File",
                                               filetypes=(("fasta files", "*.fa*"), ("all files", "*.*")))
-        if len(filename) != 0:
-            success: bool = self.controller.initialize_from_file(filename)
-            if success:
-                self.controller.on_show_msa_mat()
-                self.controller.on_show_dendrogram()
-                self.controller.on_show_consensus()
-                self.controller.on_show_dendro_clustercount()
-                self.button_filter_msa.configure(state="normal")
+        if len(filename) == 0: return
+        success: bool = self.controller.initialize_from_file(filename)
+        if not success: return
+        self.controller.on_show_msa_mat()
+        self.controller.on_show_dendrogram()
+        self.controller.on_show_consensus()
+        self.controller.on_show_dendro_clustercount()
+        self.button_filter_msa.configure(state="normal")
+        self.filter_msa_selector.configure(state="normal")
+        self.button_dendro_hcutoff.configure(state="normal")
+        self.dendro_cutoff_spinbox.enable(True)
+        self.seq_count_value.configure(text=self.controller.msa.nrows)
 
     def on_filter_msa(self):
         self.controller.run_filtering_pipeline()
@@ -258,6 +319,7 @@ class App(customtkinter.CTk):
         self.controller.on_show_consensus()
         self.controller.on_show_dendro_clustercount()
         self.button_filter_msa.configure(state="disabled")
+        self.filter_msa_selector.configure(state="disabled")
 
     def on_hide_empty_cols_switch(self):
         hide = self.checkbox_var_hide_empty_cols.get()
@@ -269,6 +331,21 @@ class App(customtkinter.CTk):
         self.controller.toggle_reorder_mat_rows(reorder)
         self.controller.on_show_msa_mat()
 
+    def on_dendro_height_change(self):
+        val = self.dendro_cutoff_spinbox.get()
+        highlight_val = self.dendro_cutoff_spinbox.highlight_val
+        if highlight_val == val: return
+        self.dendro_cutoff_spinbox.set_highlighted(val)
+        self.add_to_textbox(f"Dendrogram height cutoff set to {val}")
+        self.controller.set_dendro_hcutoff(val)
+        self.controller.on_show_dendrogram()
+        self.controller.on_show_consensus()
+        self.controller.on_show_dendro_clustercount()
+
+    def on_select_seq(self):
+        print("on select seq clicked")
+
+
     # ------ called by controller
 
     def show_matrix(self, mat_fig: Figure):
@@ -277,7 +354,7 @@ class App(customtkinter.CTk):
         ax.axis("off")
         mat_fig.set_figheight(4)
         mat_fig.set_tight_layout(True)
-        self.canvas_mat = FigureCanvasTkAgg(mat_fig, master=self.mat_display_frame)
+        self.canvas_mat = FigureCanvasTkAgg(mat_fig, self.mat_display_frame)
         self.canvas_mat.draw()
         self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
 
@@ -287,7 +364,7 @@ class App(customtkinter.CTk):
         ax.axis("off")
         dendro_fig.set_figheight(4)
         dendro_fig.set_tight_layout(True)
-        self.canvas_dendro = FigureCanvasTkAgg(dendro_fig, master=self.dendrogram_display_frame)
+        self.canvas_dendro = FigureCanvasTkAgg(dendro_fig, self.dendrogram_display_frame)
         self.canvas_dendro.draw()
         self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
@@ -297,7 +374,7 @@ class App(customtkinter.CTk):
         ax.axis("off")
         consensus_fig.set_figheight(4)
         consensus_fig.set_tight_layout(True)
-        self.canvas_consensus = FigureCanvasTkAgg(consensus_fig, master=self.consensus_frame)
+        self.canvas_consensus = FigureCanvasTkAgg(consensus_fig, self.consensus_frame)
         self.canvas_consensus.draw()
         self.canvas_consensus.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
@@ -307,7 +384,7 @@ class App(customtkinter.CTk):
         ax.axis("off")
         dc_fig.set_figheight(4)
         dc_fig.set_tight_layout(True)
-        self.canvas_dendro_clustercount = FigureCanvasTkAgg(dc_fig, master=self.dendrogram_clustercount_frame)
+        self.canvas_dendro_clustercount = FigureCanvasTkAgg(dc_fig, self.dendrogram_clustercount_frame)
         self.canvas_dendro_clustercount.draw()
         self.canvas_dendro_clustercount.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
@@ -316,9 +393,103 @@ class App(customtkinter.CTk):
         self.textbox.insert(0.0, f"{text_to_add}\n")
         self.textbox.configure(state="disabled")
 
+    def set_cluster_count(self, cluster_count: int):
+        self.cluster_count_value.configure(text=cluster_count)
+
     def get_mat_frame_wh_ratio(self):
         """Get the current matrix frame width to height ratio with reduced height (for plot title + x-axis label)."""
         w = self.mat_display_frame._current_width
         h = self.mat_display_frame._current_height - 150
         wh_ratio = w / h
         return wh_ratio
+
+
+# ------------------------------------------------------------------------
+
+class FloatSpinbox(customtkinter.CTkFrame):
+    def __init__(self, *args,
+                 width: int = 120,
+                 height: int = 32,
+                 step_size: Union[int, float] = 0.1,
+                 minval: float = 0.0,
+                 maxval: float = 1.0,
+                 command: Callable = None,
+                 **kwargs):
+        super().__init__(*args, width=width, height=height, **kwargs)
+
+        self.step_size = step_size
+        self.minval = minval
+        self.maxval = maxval
+        self.highlight_val = maxval
+        self.command = command
+
+        self.configure(fg_color=("gray78", "gray28"))  # set frame color
+
+        self.grid_columnconfigure((0, 2), weight=0)  # buttons don't expand
+        self.grid_columnconfigure(1, weight=1)  # entry expands
+
+        self.subtract_button = customtkinter.CTkButton(self, text="-", width=height-6, height=height-6,
+                                                       command=self.subtract_button_callback)
+        self.subtract_button.grid(row=0, column=0, padx=(3, 0), pady=3)
+
+        self.entry = customtkinter.CTkEntry(self, width=width-(2*height), height=height-6, border_width=0)
+        self.entry.grid(row=0, column=1, columnspan=1, padx=3, pady=3, sticky="ew")
+        self.entry.configure(state="disabled")
+
+        self.add_button = customtkinter.CTkButton(self, text="+", width=height-6, height=height-6,
+                                                  command=self.add_button_callback)
+        self.add_button.grid(row=0, column=2, padx=(0, 3), pady=3)
+
+        # default value
+        self.entry.insert(0, "0.0")
+
+    def add_button_callback(self):
+        if self.command is not None:
+            self.command()
+        try:
+            currval = round(float(self.entry.get()), 2)
+            if currval + self.step_size >= self.maxval:
+                value = self.maxval
+            else:
+                value = round(currval + self.step_size, 2)
+            self.set(value)
+        except ValueError:
+            return
+
+    def subtract_button_callback(self):
+        if self.command is not None:
+            self.command()
+        try:
+            currval = round(float(self.entry.get()), 2)
+            if currval - self.step_size <= self.minval:
+                value = self.minval
+            else:
+                value = round(currval - self.step_size, 2)
+            self.set(value)
+        except ValueError:
+            return
+
+    def get(self) -> Union[float, None]:
+        try:
+            return float(self.entry.get())
+        except ValueError:
+            return None
+
+    def set(self, value: float):
+        self.entry.configure(state="normal")
+        self.entry.delete(0, "end")
+        self.entry.insert(0, str(float(value)))
+        if value == self.highlight_val:
+            self.entry.configure(text_color="#0059b3")
+        else:
+            self.entry.configure(text_color="black")
+        self.entry.configure(state="disabled")
+
+    def set_highlighted(self, highlight_val: float):
+        self.highlight_val = highlight_val
+        self.set(highlight_val)
+
+    def enable(self, enable: float = True):
+        enable_str = "normal" if enable else "disabled"
+        self.add_button.configure(state=enable_str)
+        self.subtract_button.configure(state=enable_str)

@@ -54,11 +54,11 @@ class Controller:
             self.consensus_changed = True
             self.dclustercount_changed = True
         else:
-            self.gui.add_to_textbox(f"Could not load MSA from file '{fname_truncated}'.")
+            self.gui.add_to_textbox(f"Could not load MSA from file '{fname_truncated}'.\n")
             return False
         return True
 
-    def run_filtering_pipeline(self):
+    def run_filtering_pipeline(self, aggressive: bool = False):
         """Triggers running a matrix filtering pipeline on the MultiSeqAlignment object."""
         if not self.is_mat_initialized(): return
         self.gui.add_to_textbox("Running filtering pipeline.")
@@ -68,6 +68,11 @@ class Controller:
         self.gui.add_to_textbox("-- OP: Cross-convolving (1x5)")
         self.msa.img_process(cross_convolve, col_size=17, row_size=7)
         self.gui.add_to_textbox("-- OP: Cross-convolving (7x17)")
+        if aggressive:
+            vsize = self.msa.nrows // 10
+            vsize = vsize if vsize % 2 == 1 else vsize + 1
+            self.msa.img_process(cross_convolve, col_size=vsize, row_size=3)
+            self.gui.add_to_textbox(f"-- OP: Cross-convolving ({3}x{vsize})")
         self.msa_changed = True
         self.dendro_changed = True
         self.consensus_changed = True

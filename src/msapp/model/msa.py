@@ -24,6 +24,7 @@ class MultiSeqAlignment:
         self.ncols: int = -1
         self._ridx: np.array = []  # list of row indices
         self._cidx: np.array = []  # list of col indices
+        self._csort_indices = None
         self.linkage_mat = LinkageMat()
 
         if filename is not None and filename != "":
@@ -50,11 +51,11 @@ class MultiSeqAlignment:
 
         # Create a binary matrix from the multiple sequence alignment file
         msa_mat = np.array([])
-        seq_names = np.array([])
+        seq_names = []
         entry_length = -1
         with open(filename) as fh:
             for entry in SimpleFastaParser(handle=fh):
-                np.append(seq_names, entry[0])
+                seq_names.append(entry[0])
                 seq = entry[1]
                 rlen = len(seq)
                 if entry_length == -1:
@@ -105,6 +106,7 @@ class MultiSeqAlignment:
         self.nrows = self._mat.shape[0]
         self.ncols = self._mat.shape[1]
         self.linkage_mat.mat_changed()
+        self._csort_indices = None
 
         if gc.DISPLAY: self.visualize(rf"Removed {len(seqs_over_three_std)} seqs > 3 $\sigma$ length")
         self._post_op()
@@ -243,7 +245,10 @@ class MultiSeqAlignment:
         if hide_empty_cols:
             mat = remove_empty_cols(mat)
         if reorder_rows:
-            mat = sort_by_metric(mat)
+            if self._csort_indices is None:
+                cluster_labels = fcluster(self.get_linkage_mat(), t=0, criterion='distance')
+                self._csort_indices = np.argsort(cluster_labels)
+            mat = mat[self._csort_indices]
         return mat
 
     def save_to_file(self, filename: str) -> None:
@@ -280,5 +285,6 @@ class LinkageMat:
             if gc.VERBOSE: print("Calculating linkage matrix")
             self.link_mat = linkage(self.dst_mat, method=cmethod)
             self.link_cmethod =  cmethod
+
         return self.link_mat
 

@@ -302,24 +302,30 @@ class App(customtkinter.CTk):
         if len(filename) == 0: return
         success: bool = self.controller.initialize_from_file(filename)
         if not success: return
+        self.dendro_cutoff_spinbox.set_highlighted(0.75)
+        self.controller.set_dendro_hcutoff(0.75)
+
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
         self.controller.on_show_consensus()
         self.controller.on_show_dendro_clustercount()
+
         self.button_filter_msa.configure(state="normal")
         self.filter_msa_selector.configure(state="normal")
         self.button_dendro_hcutoff.configure(state="normal")
         self.dendro_cutoff_spinbox.enable(True)
         self.seq_count_value.configure(text=self.controller.msa.nrows)
+        # self.seq_selector.configure(state="normal", values=self.controller.msa.seq_names)
 
     def on_filter_msa(self):
-        self.controller.run_filtering_pipeline()
+        msa_filter_type = self.filter_msa_selector.get()
+        self.controller.run_filtering_pipeline(msa_filter_type == "Aggressive")
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
         self.controller.on_show_consensus()
         self.controller.on_show_dendro_clustercount()
-        self.button_filter_msa.configure(state="disabled")
         self.filter_msa_selector.configure(state="disabled")
+        self.button_filter_msa.configure(state="disabled")
 
     def on_hide_empty_cols_switch(self):
         hide = self.checkbox_var_hide_empty_cols.get()

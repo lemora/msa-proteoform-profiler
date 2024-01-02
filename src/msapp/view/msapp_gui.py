@@ -1,16 +1,16 @@
 from tkinter import filedialog
-import customtkinter
+import customtkinter as ctki
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from typing import Union, Callable
 
-customtkinter.set_appearance_mode("System")
-customtkinter.set_default_color_theme("blue")
+ctki.set_appearance_mode("System")
+ctki.set_default_color_theme("blue")
 
 
-class App(customtkinter.CTk):
+class App(ctki.CTk):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
@@ -31,22 +31,22 @@ class App(customtkinter.CTk):
 
         # ------ left sidebar frame
 
-        self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
+        self.sidebar_frame = ctki.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
-        self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="MSAPP",
-                                                 font=customtkinter.CTkFont(size=20, weight="bold"))
+        self.logo_label = ctki.CTkLabel(self.sidebar_frame, text="MSAPP",
+                                                 font=ctki.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, text='Load FASTA',
+        self.sidebar_button_1 = ctki.CTkButton(self.sidebar_frame, text='Load FASTA',
                                                         command=self.on_load_file)
         self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
-        self.sidebar_button_save = customtkinter.CTkButton(self.sidebar_frame, text="Save", command=self.on_save)
+        self.sidebar_button_save = ctki.CTkButton(self.sidebar_frame, text="Save", command=self.on_save)
         self.sidebar_button_save.grid(row=2, column=0, padx=20, pady=10)
-        self.sidebar_button_close = customtkinter.CTkButton(self.sidebar_frame, text="Quit", command=self.on_closing)
+        self.sidebar_button_close = ctki.CTkButton(self.sidebar_frame, text="Quit", command=self.on_closing)
         self.sidebar_button_close.grid(row=3, column=0, padx=20, pady=10)
-        self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
+        self.appearance_mode_label = ctki.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
-        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame,
+        self.appearance_mode_optionemenu = ctki.CTkOptionMenu(self.sidebar_frame,
                                                                        values=["Light", "Dark", "System"],
                                                                        command=self.on_change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
@@ -55,7 +55,7 @@ class App(customtkinter.CTk):
 
         # ------ MAT DISPLAY FRAME (upper middle)
 
-        self.tabview_mat = customtkinter.CTkTabview(self)
+        self.tabview_mat = ctki.CTkTabview(self)
         self.tabview_mat.grid(row=0, rowspan=2, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
         self.tabview_mat.grid_columnconfigure(0, weight=1)
         self.tabview_mat.add("MSA")
@@ -67,12 +67,12 @@ class App(customtkinter.CTk):
 
         # ------ mat view
 
-        self.mat_display_frame = customtkinter.CTkFrame(self.tabview_mat.tab("MSA"), fg_color="transparent")
+        self.mat_display_frame = ctki.CTkFrame(self.tabview_mat.tab("MSA"), fg_color="transparent")
         self.mat_display_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
         self.mat_display_frame.grid_columnconfigure(0, weight=1)
         self.mat_display_frame.grid_rowconfigure(0, weight=1)
-        self.mat_label = customtkinter.CTkLabel(self.mat_display_frame, text="MSA Matrix",
-                                                font=customtkinter.CTkFont(size=15))
+        self.mat_label = ctki.CTkLabel(self.mat_display_frame, text="MSA Matrix",
+                                                font=ctki.CTkFont(size=15))
         self.mat_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
 
         fig, ax = plt.subplots()
@@ -85,12 +85,12 @@ class App(customtkinter.CTk):
 
         # ------ consensus view
 
-        self.consensus_frame = customtkinter.CTkFrame(self.tabview_mat.tab("Consensus"), fg_color="transparent")
+        self.consensus_frame = ctki.CTkFrame(self.tabview_mat.tab("Consensus"), fg_color="transparent")
         self.consensus_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
         self.consensus_frame.grid_columnconfigure(0, weight=1)
         self.consensus_frame.grid_rowconfigure(0, weight=1)
-        self.mat_label = customtkinter.CTkLabel(self.consensus_frame, text="MSA Consensus",
-                                                font=customtkinter.CTkFont(size=15))
+        self.mat_label = ctki.CTkLabel(self.consensus_frame, text="MSA Consensus",
+                                                font=ctki.CTkFont(size=15))
         self.mat_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
 
         fig, ax = plt.subplots()
@@ -103,7 +103,7 @@ class App(customtkinter.CTk):
 
         # ------ DENDROGRAM DISPLAY FRAME (lower middle)
 
-        self.tabview_dendro = customtkinter.CTkTabview(self)
+        self.tabview_dendro = ctki.CTkTabview(self)
         self.tabview_dendro.grid(row=2, rowspan=2, column=1, padx=(20, 0), pady=(20, 20), sticky="nsew")
         self.tabview_dendro.grid_columnconfigure(0, weight=1)
         self.tabview_dendro.add("Dendrogram")
@@ -115,12 +115,12 @@ class App(customtkinter.CTk):
 
         # ------ dendrogram view
 
-        self.dendrogram_display_frame = customtkinter.CTkFrame(self.tabview_dendro.tab("Dendrogram"), fg_color="transparent")
+        self.dendrogram_display_frame = ctki.CTkFrame(self.tabview_dendro.tab("Dendrogram"), fg_color="transparent")
         self.dendrogram_display_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
         self.dendrogram_display_frame.grid_columnconfigure(0, weight=1)
         self.dendrogram_display_frame.grid_rowconfigure(0, weight=1)
-        self.dendrogram_label = customtkinter.CTkLabel(self.dendrogram_display_frame, text="Dendrogram",
-                                                       font=customtkinter.CTkFont(size=15))
+        self.dendrogram_label = ctki.CTkLabel(self.dendrogram_display_frame, text="Dendrogram",
+                                                       font=ctki.CTkFont(size=15))
         self.dendrogram_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
 
         fig, ax = plt.subplots()
@@ -133,12 +133,12 @@ class App(customtkinter.CTk):
 
         # ------ dendrogram height cluster view
 
-        self.dendrogram_clustercount_frame = customtkinter.CTkFrame(self.tabview_dendro.tab("Dendro-Clusters"), fg_color="transparent")
+        self.dendrogram_clustercount_frame = ctki.CTkFrame(self.tabview_dendro.tab("Dendro-Clusters"), fg_color="transparent")
         self.dendrogram_clustercount_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
         self.dendrogram_clustercount_frame.grid_columnconfigure(0, weight=1)
         self.dendrogram_clustercount_frame.grid_rowconfigure(0, weight=1)
-        self.dendro_height_label = customtkinter.CTkLabel(self.dendrogram_clustercount_frame, text="Cluster Count Per Height",
-                                                       font=customtkinter.CTkFont(size=15))
+        self.dendro_height_label = ctki.CTkLabel(self.dendrogram_clustercount_frame, text="Cluster Count Per Height",
+                                                       font=ctki.CTkFont(size=15))
         self.dendro_height_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
 
         fig, ax = plt.subplots()
@@ -151,7 +151,7 @@ class App(customtkinter.CTk):
 
         # ------ options/operations frame
 
-        self.tabview = customtkinter.CTkTabview(self, width=280)
+        self.tabview = ctki.CTkTabview(self, width=280)
         self.tabview.grid(row=0, rowspan=2, column=2, padx=(20, 0), pady=(20, 0), sticky="nsew")
         self.tabview.add("Global")
         self.tabview.add("SingleSeq")
@@ -164,11 +164,11 @@ class App(customtkinter.CTk):
 
         # Tab 1: Global
 
-        self.filter_msa_selector = customtkinter.CTkOptionMenu(self.tabview.tab("Global"), width=110,
+        self.filter_msa_selector = ctki.CTkOptionMenu(self.tabview.tab("Global"), width=110,
                                                      dynamic_resizing=False, values=["Standard", "Aggressive"])
         self.filter_msa_selector.grid(row=0, column=0, padx=(10, 5), pady=(15, 0), sticky="nw")
 
-        self.button_filter_msa = customtkinter.CTkButton(self.tabview.tab("Global"), width=120,
+        self.button_filter_msa = ctki.CTkButton(self.tabview.tab("Global"), width=120,
                                                          text="Filter MSA", command=self.on_filter_msa)
         self.button_filter_msa.grid(row=0, column=1, padx=(0, 10), pady=(15, 0))
 
@@ -177,21 +177,21 @@ class App(customtkinter.CTk):
                                                                                     minval=0.25, maxval=1.0)
         self.dendro_cutoff_spinbox.grid(row=1, column=0, padx=(10, 5), pady=(10, 0), sticky="nw")
 
-        self.button_dendro_hcutoff = customtkinter.CTkButton(self.tabview.tab("Global"), width=120, text="Use dendro cutoff",
+        self.button_dendro_hcutoff = ctki.CTkButton(self.tabview.tab("Global"), width=120, text="Use dendro cutoff",
                                                          command=self.on_dendro_height_change)
         self.button_dendro_hcutoff.grid(row=1, column=1, padx=(0, 10), pady=(10, 0))
 
         # visualization checkboxes
-        self.checkbox_var_hide_empty_cols = customtkinter.BooleanVar()
-        self.checkbox_hide_empty_cols = customtkinter.CTkCheckBox(self.tabview.tab("Global"),
+        self.checkbox_var_hide_empty_cols = ctki.BooleanVar()
+        self.checkbox_hide_empty_cols = ctki.CTkCheckBox(self.tabview.tab("Global"),
                                                                   text="Hide empty columns",
                                                                   command=self.on_hide_empty_cols_switch,
                                                                   variable=self.checkbox_var_hide_empty_cols,
                                                                   onvalue=True, offvalue=False)
         self.checkbox_hide_empty_cols.grid(row=2, column=0, columnspan=2, pady=(20, 0), padx=(10, 10), sticky="nw")
 
-        self.checkbox_var_reorder_mat_rows = customtkinter.BooleanVar()
-        self.checkbox_reorder_mat_rows = customtkinter.CTkCheckBox(self.tabview.tab("Global"),
+        self.checkbox_var_reorder_mat_rows = ctki.BooleanVar()
+        self.checkbox_reorder_mat_rows = ctki.CTkCheckBox(self.tabview.tab("Global"),
                                                                    text="Sort sequences",
                                                                    command=self.on_reorder_mat_rows_switch,
                                                                    variable=self.checkbox_var_reorder_mat_rows,
@@ -201,51 +201,51 @@ class App(customtkinter.CTk):
 
         # Tab 2: SingleSeq
 
-        self.seq_selector = customtkinter.CTkOptionMenu(self.tabview.tab("SingleSeq"), width=110,
+        self.seq_selector = ctki.CTkOptionMenu(self.tabview.tab("SingleSeq"), width=110,
                                                         dynamic_resizing=False, values=["-"])
         self.seq_selector.grid(row=0, column=0, padx=(10, 5), pady=(15, 0), sticky="nw")
 
-        self.button_choose_seq = customtkinter.CTkButton(self.tabview.tab("SingleSeq"), width=120, text="Select Sequence",
+        self.button_choose_seq = ctki.CTkButton(self.tabview.tab("SingleSeq"), width=120, text="Select Sequence",
                                                          command=self.on_select_seq)
         self.button_choose_seq.grid(row=0, column=1, padx=(0, 10), pady=(15, 0))
 
         # selected sequence
-        self.selected_seq_label = customtkinter.CTkLabel(self.tabview.tab("SingleSeq"), text="Details:",
-                                                         font=customtkinter.CTkFont(size=15))
+        self.selected_seq_label = ctki.CTkLabel(self.tabview.tab("SingleSeq"), text="Details:",
+                                                         font=ctki.CTkFont(size=15))
         self.selected_seq_label.grid(row=1, column=0, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nw")
-        self.selected_seq_value = customtkinter.CTkLabel(self.tabview.tab("SingleSeq"), text="",
-                                                         font=customtkinter.CTkFont(size=15))
+        self.selected_seq_value = ctki.CTkLabel(self.tabview.tab("SingleSeq"), text="",
+                                                         font=ctki.CTkFont(size=15))
         self.selected_seq_value.grid(row=3, column=0, padx=(10, 0), pady=(10, 0), sticky="nw")
 
         # ------ info frame
 
-        self.scrollable_frame = customtkinter.CTkScrollableFrame(self, label_text="Info")
+        self.scrollable_frame = ctki.CTkScrollableFrame(self, label_text="Info")
         self.scrollable_frame.grid(row=0, rowspan=2, column=3, padx=(20, 20), pady=(37, 0), sticky="nsew")
         self.scrollable_frame.grid_columnconfigure(0, weight=1)
 
         # filter score
-        self.seq_count_label = customtkinter.CTkLabel(self.scrollable_frame, text="Sequence count:",
-                                                         font=customtkinter.CTkFont(size=15))
+        self.seq_count_label = ctki.CTkLabel(self.scrollable_frame, text="Sequence count:",
+                                                         font=ctki.CTkFont(size=15))
         self.seq_count_label.grid(row=0, column=0, padx=(10, 0), pady=(10, 0), sticky="nw")
-        self.seq_count_value = customtkinter.CTkLabel(self.scrollable_frame, text="",
-                                                         font=customtkinter.CTkFont(size=15))
+        self.seq_count_value = ctki.CTkLabel(self.scrollable_frame, text="",
+                                                         font=ctki.CTkFont(size=15))
         self.seq_count_value.grid(row=0, column=1, padx=(0, 10), pady=(10, 0), sticky="nw")
 
-        self.cluster_count_label = customtkinter.CTkLabel(self.scrollable_frame, text="Cluster count:",
-                                                      font=customtkinter.CTkFont(size=15))
+        self.cluster_count_label = ctki.CTkLabel(self.scrollable_frame, text="Cluster count:",
+                                                      font=ctki.CTkFont(size=15))
         self.cluster_count_label.grid(row=1, column=0, padx=(10, 0), pady=(5, 0), sticky="nw")
-        self.cluster_count_value = customtkinter.CTkLabel(self.scrollable_frame, text="",
-                                                      font=customtkinter.CTkFont(size=15))
+        self.cluster_count_value = ctki.CTkLabel(self.scrollable_frame, text="",
+                                                      font=ctki.CTkFont(size=15))
         self.cluster_count_value.grid(row=1, column=1, padx=(0, 10), pady=(5, 0), sticky="nw")
 
 
         # ------ textbox
 
-        self.logging_frame = customtkinter.CTkFrame(self)
+        self.logging_frame = ctki.CTkFrame(self)
         self.logging_frame.grid(row=2, rowspan=2, column=2, columnspan=2, padx=(20, 20), pady=(20, 20), sticky="nsew")
         self.logging_frame.grid_columnconfigure((0, 1), weight=1)
         self.logging_frame.grid_rowconfigure(0, weight=1)
-        self.textbox = customtkinter.CTkTextbox(self.logging_frame)
+        self.textbox = ctki.CTkTextbox(self.logging_frame)
         self.textbox.grid(row=0, column=0, columnspan=2, padx=(10, 10), pady=(10, 10), sticky="nsew")
 
         # ------ set default values
@@ -274,7 +274,7 @@ class App(customtkinter.CTk):
         self.quit()
 
     def on_change_appearance_mode_event(self, new_appearance_mode: str):
-        customtkinter.set_appearance_mode(new_appearance_mode)
+        ctki.set_appearance_mode(new_appearance_mode)
 
     def on_resizing(self, event):
         if event.widget == self:
@@ -412,7 +412,7 @@ class App(customtkinter.CTk):
 
 # ------------------------------------------------------------------------
 
-class FloatSpinbox(customtkinter.CTkFrame):
+class FloatSpinbox(ctki.CTkFrame):
     def __init__(self, *args,
                  width: int = 120,
                  height: int = 32,
@@ -434,15 +434,15 @@ class FloatSpinbox(customtkinter.CTkFrame):
         self.grid_columnconfigure((0, 2), weight=0)  # buttons don't expand
         self.grid_columnconfigure(1, weight=1)  # entry expands
 
-        self.subtract_button = customtkinter.CTkButton(self, text="-", width=height-6, height=height-6,
+        self.subtract_button = ctki.CTkButton(self, text="-", width=height-6, height=height-6,
                                                        command=self.subtract_button_callback)
         self.subtract_button.grid(row=0, column=0, padx=(3, 0), pady=3)
 
-        self.entry = customtkinter.CTkEntry(self, width=width-(2*height), height=height-6, border_width=0)
+        self.entry = ctki.CTkEntry(self, width=width-(2*height), height=height-6, border_width=0)
         self.entry.grid(row=0, column=1, columnspan=1, padx=3, pady=3, sticky="ew")
         self.entry.configure(state="disabled")
 
-        self.add_button = customtkinter.CTkButton(self, text="+", width=height-6, height=height-6,
+        self.add_button = ctki.CTkButton(self, text="+", width=height-6, height=height-6,
                                                   command=self.add_button_callback)
         self.add_button.grid(row=0, column=2, padx=(0, 3), pady=3)
 

@@ -17,6 +17,7 @@ class Controller:
         self.hide_empty_cols = False
         self.reorder_rows = False
         self.dendro_hcutoff = 0.75
+        self.selected_seq = -1
 
         # dirty flags for visualizations that need to be refreshed
         self.msa_changed = True
@@ -46,9 +47,7 @@ class Controller:
             self.msa = msa
             self.gui.add_to_textbox(f"Sucessfully loaded MSA from file '{fname_truncated}'.\n")
 
-            # reset consensus and dclust plots
-            self.gui.show_consensus(get_empty_plot())
-            self.gui.show_dendro_clustercount(get_empty_plot())
+            # flag all plots as dirty
             self.msa_changed = True
             self.dendro_changed = True
             self.consensus_changed = True
@@ -97,6 +96,15 @@ class Controller:
         self.consensus_changed = True
         self.dclustercount_changed = True
 
+    def set_selected_seq(self, selected_seq: str):
+        if self.selected_seq == selected_seq:
+            return
+        self.selected_seq = selected_seq
+
+    def get_selected_seq_mat_idx(self):
+        idx = -1
+        return idx
+
     def on_show_msa_mat(self, force: bool = False):
         """Controller is ordered to fetch an MSA matrix visualization figure and forward it to the GUI."""
         if not self.is_mat_initialized(): return
@@ -105,7 +113,7 @@ class Controller:
         mat = self.msa.get_mat(self.hide_empty_cols, self.reorder_rows)
         if mat is not None:
             wh_ratio = self.gui.get_mat_frame_wh_ratio()
-            resized = create_resized_mat_visualization(mat, wh_ratio)
+            resized = create_resized_mat_visualization(mat, wh_ratio, self.get_selected_seq_mat_idx())
             fig = show_as_subimages(resized, "")
             self.gui.show_matrix(fig)
             self.msa_changed = False
@@ -124,10 +132,10 @@ class Controller:
         if not self.is_mat_initialized(): return
         if not force and not self.consensus_changed: return
 
-        consensus_clusters = self.msa.calc_consensus_clusters(perc_threshold=self.dendro_hcutoff)
+        consensus_clusters, cluster_sizes = self.msa.calc_consensus_clusters(perc_threshold=self.dendro_hcutoff)
         nclusters = len(consensus_clusters)
         self.gui.set_cluster_count(nclusters)
-        fig = create_cluster_consensus_visualization(consensus_clusters)
+        fig = create_cluster_consensus_visualization(consensus_clusters, cluster_sizes)
         self.gui.show_consensus(fig)
         self.consensus_changed = False
 
@@ -139,3 +147,6 @@ class Controller:
         fig = create_dendrogram_height_cluster_count_plot(self.msa.get_linkage_mat(), self.dendro_hcutoff)
         self.gui.show_dendro_clustercount(fig)
         self.consensus_changed = False
+
+    def get_seq_indexer(self):
+        return self.msa.get_seq_indexer() if self.is_mat_initialized() else None

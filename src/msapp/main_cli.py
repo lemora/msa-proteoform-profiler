@@ -41,9 +41,9 @@ def run() -> None:
 
     # --- remove sequences that are much too long; > 3 sigma
 
-    sort_by = lambda row: sum(row)
+    def sort_by(row): return sum(row)
     msa.filter_by_length_statistic()
-    msa.remove_empty_cols(show=gc.DISPLAY)
+    msa.remove_empty_cols(should_show=gc.DISPLAY)
 
     # --- image processing to remove noise
 
@@ -54,16 +54,17 @@ def run() -> None:
     msa.img_process(cross_convolve, col_size=col_size, row_size=3)
 
     # cleaning step, optional. Loses horizontal fragmentation
-    msa.remove_empty_cols(show=gc.DISPLAY)
+    msa.remove_empty_cols(should_show=gc.DISPLAY)
 
     msa.img_process(gaussian_blur)
 
     # --- clustering
 
     if p.filter > 0:
-        filter_by_reference(p.filter)
+        filter_by_reference(msa.get_mat(), p.filter)
 
     if p.reorder:
         msa.sort_by_metric(sorting_metric=sort_by)
 
     if p.save: msa.save_to_file("proteoform-img")
+

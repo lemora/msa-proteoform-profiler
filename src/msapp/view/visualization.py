@@ -11,14 +11,13 @@ import msapp.gconst as gc
 
 # ----------------- general plotting
 
-def show_pre_post(pre, post, title: str) -> None:
+def show_pre_post(pre, post, title: str) -> Figure:
     """Shows two matrix images next to each other if they are not too wide. Intended for before/after some change was
     applied to the same matrix."""
     if pre.shape[1] > 3000:
         if gc.VERBOSE: print("INFO: Image is too large to show pre/post. Just showing post version.")
         si_mat = create_colsplit_subimages_mat(post, -1)
-        show_as_subimages(si_mat, title)
-        return
+        return show_as_subimages(si_mat, title)
 
     plt.subplot(121)
     plt.imshow(pre, cmap="gray"), plt.title(f'Before [{pre.shape[0]}x{pre.shape[1]}]')
@@ -63,19 +62,20 @@ def show_as_subimages(mat, title: str) -> Figure:
 
     figure = plt.figure(figsize=(8, 8))
     figure.subplots()
-    plt.imshow(mat, cmap="gray") #, plt.title(f"{title} [{mat.shape[0]}x{mat.shape[1]}]")
+    plt.imshow(mat, cmap="gray")
     plt.xticks([]), plt.yticks([])
-    plt.xlabel("Position in aligned sequence")
+    plt.xlabel(title if title != "" else "Position in aligned sequence")
     plt.ylabel("Sequence number")
 
     if gc.DISPLAY: plt.show()
     return figure
 
 
-def create_resized_mat_visualization(mat: np.array, target_ratio: float):
+def create_resized_mat_visualization(mat: np.array, target_ratio: float, highlight_row_idx: int = -1) -> np.array:
     """Based on a given width to height ratio, this method calculates the optimal number of blocks the matrix needs to
     be split either by row or by column, so that if the blocks are concatenated in the other axis direction,
     they best approximate the given target aspect ratio.
+    It also highlights a selected row.
     Another method is called that then does the matrix splitting and concatenation."""
     original_height, original_width = mat.shape
 
@@ -88,40 +88,64 @@ def create_resized_mat_visualization(mat: np.array, target_ratio: float):
 
     if abs(new_ratio_row - target_ratio) < abs(new_ratio_column - target_ratio):
         split_count = splits_by_row
-        split_by_row =  True
+        split_by_row = True
     else:
         split_count = splits_by_column
-        split_by_row =  False
+        split_by_row = False
 
     # if splitting by row is more optimal, transpose matrix before and after calling the splitting by col function
-    if split_count == 1: return mat
+    image = highlight_row(mat, highlight_row_idx)
     if split_by_row:
-        mat = cv2.transpose(mat)
-    reordered_mat = create_colsplit_subimages_mat(mat, split_count)
+        image = cv2.transpose(image)
+    reordered_mat = create_colsplit_subimages_mat(image, split_count)
     if split_by_row:
         return cv2.transpose(reordered_mat)
     return reordered_mat
 
 
-def create_colsplit_subimages_mat(mat, splits: int = -1):
-    """Splits a matrix into several ('splits' parameter) row blocks and appends them as column blocks.
-    The blocks are divided by a colourful border."""
-    binary_image = np.array(mat, dtype=np.uint8) * 255
+def highlight_row(mat: np.array, row_idx: int) -> np.array:
+    height, width = mat.shape
+    # to image
+    image = np.array(mat, dtype=np.uint8) * 255
+    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+    # highlight selected row
+    if 0 <= row_idx < height:
+        white_highlight = (255, 0, 0)  # red
+        black_highlight = (0, 89, 178)  # blue
+        the_row = mat[row_idx]
+        colored_row = np.array([black_highlight if i == 0 else white_highlight for i in the_row])
+        image[row_idx] = colored_row
+
+    return image
+
+
+def create_colsplit_subimages_mat(imgmat, splits: int = -1) -> np.array:
+    """Splits an image (3 or 1 value per entry) into several ('splits' parameter) row blocks and appends them as
+    column blocks. The blocks are divided by a gray border.
+    An RGB image with 3 values per entry is returned."""
+    if isinstance(imgmat[0][0], np.uint8):
+        # create image with three channels
+        imgmat = np.array(imgmat, dtype=np.uint8) * 255
+        imgmat = cv2.cvtColor(imgmat, cv2.COLOR_GRAY2BGR)
+
+    width = len(imgmat[0])
     # Split the image into equal columns
-    height, width = binary_image.shape
-    if splits == -1:
-        splits = 3 if mat.shape[1] > 8000 else 2
+    if splits == 1:
+        return imgmat
+    elif splits == -1:
+        splits = 3 if width > 8000 else 2
 
     subimage_width = width // splits
     separator = np.zeros((12, subimage_width, 3), dtype=np.uint8)
     separator[:, :] = (150, 150, 0)  # colourful border
+    # separator[:, :] = (128, 128, 128)  # gray border
 
     subimages = []
     for i in range(splits):
         start_col = i * subimage_width
         end_col = (i + 1) * subimage_width
-        subimage = binary_image[:, start_col:end_col]
-        subimage = cv2.cvtColor(subimage, cv2.COLOR_GRAY2BGR)
+        subimage = imgmat[:, start_col:end_col]
         subimages.append(subimage)
         if i < splits - 1:
             subimages.append(separator)
@@ -131,22 +155,43 @@ def create_colsplit_subimages_mat(mat, splits: int = -1):
 
 # ----------------- clustering
 
-def create_cluster_consensus_visualization(consensus_sequences: list[list]):
+def create_cluster_consensus_visualization(seqs: list[list], cluster_sizes: list = None):
     """Shows the consensus of a number of sequence clusters based on similarity."""
-    sorted_cseqs = consensus_sequences
-    num_blocks = len(sorted_cseqs)
-    row_len = len(sorted_cseqs[0])
-    rows_per_block = int(row_len/ (3.5 * num_blocks))
+    num_blocks = len(seqs)
+    row_len = len(seqs[0])
+    goal_height = int(row_len/3)
+    min_blocksize = int(goal_height/20)
+    if cluster_sizes is None:
+        rows_per_block = int(row_len / (3 * num_blocks))
+        cluster_sizes = [rows_per_block for _ in range(num_blocks)]
+    else:
+        curr_height = sum(cluster_sizes)
+        block_factor = int(goal_height / curr_height)
+        block_divisor = int(curr_height / goal_height)
+        if block_factor > 1:
+            cluster_sizes = [max(i*block_factor, min_blocksize) for i in cluster_sizes]
+        elif block_divisor > 1:
+            cluster_sizes = [max(int(i/block_divisor), min_blocksize) for i in cluster_sizes]
 
-    subimages = []
-    for cseq in sorted_cseqs:
-        for j in range(rows_per_block):
-            subimages.append(cseq)
+    height = sum(cluster_sizes)
 
-    concat_img = np.vstack(subimages)
+    image = np.zeros([height, row_len, 3], dtype=np.uint8) * 255
+
+    white = (255, 255, 255)
+    black = (0, 0, 0)
+    # sepcolor = (0, 89, 178)
+    sepcolor = (0, 51, 102)
+    pos = 0
+    for i, cseq in enumerate(seqs):
+        col = black if i % 2 == 0 else sepcolor
+        colored_row = np.array([col if i == 0 else white for i in cseq])
+        for j in range(cluster_sizes[i]):
+            image[pos] = colored_row
+            pos += 1
 
     fig, ax = plt.subplots()
-    plt.subplot(), plt.imshow(concat_img, cmap="gray")#, plt.title(f"Consensus of {num_blocks} sequence clusters")
+    plt.subplot()
+    plt.imshow(image, cmap="gray")
     plt.xticks([]), plt.yticks([])
     plt.xlabel("Position in aligned sequence")
     plt.ylabel("Clusters")
@@ -176,7 +221,7 @@ def visualize_dendrogram(linkage_mat, dheight: float = 0.75) -> Figure:
     if dheight < 0.0 or dheight > 1.0:
         raise ValueError("The dendrogram height at which to color differently needs to be between 0 and 1.")
     fig, ax = plt.subplots()
-    dheight = dheight * max(linkage_mat[:,2])
+    dheight = dheight * max(linkage_mat[:, 2])
     dendrogram(linkage_mat, ax=ax, color_threshold=dheight)
     plt.axhline(y=dheight, linestyle='--', color='gray', label='Desired Clusters')
 
@@ -212,12 +257,16 @@ def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.
     return fig
 
 
+empty_plot = None
 def get_empty_plot():
-    """Creates an empty plot. Mainly for resetting GUI canvases."""
+    """Returns an empty plot. Mainly for resetting GUI canvases."""
+    # global empty_plot
+    # if empty_plot is None:
     fig, ax = plt.subplots()
     ax.axis("off")
     plt.xticks([]), plt.yticks([])
-    return fig
+    empty_plot =  fig
+    return empty_plot
 
 
 # ----------------- statistics
@@ -239,6 +288,6 @@ def imgsave(img, filename="proteoform-img") -> None:
     fig, ax = plt.subplots(nrows=1, ncols=1)
     plt.imshow(img, cmap="gray")
     plt.xticks([]), plt.yticks([])
-    plt.set_tight_layout(True)
+    # plt.set_tight_layout(True)
     fig.savefig(f"out/{filename}.png", bbox_inches='tight')
     plt.close(fig)

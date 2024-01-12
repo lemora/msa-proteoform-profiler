@@ -1,6 +1,7 @@
 import copy
-import numpy as np
+from enum import Enum
 
+import numpy as np
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import pdist
@@ -8,7 +9,8 @@ from scipy.stats import mode
 
 import msapp.gconst as gc
 from msapp.model.mat_manipulation import remove_empty_cols, remove_seqs_from_alignment, sort_by_metric
-from msapp.view.visualization import create_cluster_consensus_visualization, imgsave, visualize_clusters, show, show_hist
+from msapp.view.visualization import create_cluster_consensus_visualization, imgsave, show, show_hist, \
+    visualize_clusters
 
 
 class MultiSeqAlignment:
@@ -26,6 +28,8 @@ class MultiSeqAlignment:
         self._cidx: np.array = []  # list of col indices
         self._csort_indices = None
         self.linkage_mat = LinkageMat()
+        self.seq_indexer = SequenceIndexer()
+        self.cr_score = None
 
         if filename is not None and filename != "":
             self.init_from_file(filename)
@@ -75,6 +79,7 @@ class MultiSeqAlignment:
 
         self._filename: str = filename
         self.seq_names = seq_names
+        self.seq_indexer.init(seq_names)
         msa_mat = np.array(msa_mat, dtype=np.uint8)
         self._mat = msa_mat
         self.nrows = msa_mat.shape[0]
@@ -88,6 +93,10 @@ class MultiSeqAlignment:
         if gc.DISPLAY: self.visualize("Original")
         self._post_op()
         return True
+
+
+    def get_seq_indexer(self):
+        return self.seq_indexer
 
     # ------ filter operations
 
@@ -111,12 +120,12 @@ class MultiSeqAlignment:
         if gc.DISPLAY: self.visualize(rf"Removed {len(seqs_over_three_std)} seqs > 3 $\sigma$ length")
         self._post_op()
 
-    def remove_empty_cols(self, show: bool = False):
+    def remove_empty_cols(self, should_show: bool = False):
         """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
         self._mat = remove_empty_cols(self._mat)
         self.nrows = self._mat.shape[0]
         self.ncols = self._mat.shape[1]
-        if show: self.visualize(f"Removed empty columns")
+        if should_show: self.visualize(f"Removed empty columns")
         self._post_op()
 
 
@@ -166,8 +175,10 @@ class MultiSeqAlignment:
         if gc.VERBOSE: print(f"Clustering, n discovered: {nclusters}")
 
         consensus_list = np.array([])
+        cluster_sizes = []
         for i in range(1, nclusters + 1):
             cluster_indices = np.where(cluster_labels == i)[0]
+            cluster_sizes.append(len(cluster_indices))
             cluster_data = mat[cluster_indices]
             cseq = mode(cluster_data, axis=0).mode
             consensus_list = np.vstack((consensus_list, cseq)) if consensus_list.size else cseq
@@ -175,7 +186,7 @@ class MultiSeqAlignment:
         if gc.DISPLAY: create_cluster_consensus_visualization(consensus_list)
         if nclusters == 1:
             consensus_list = [consensus_list]
-        return consensus_list
+        return consensus_list, cluster_sizes
 
     # -------- analysis/metrics
 
@@ -202,7 +213,7 @@ class MultiSeqAlignment:
         ct = float(col_trans) / float(self.ncols)
         prod = rt * ct
 
-        if (verbose if verbose is not None else gc.VERBOSE):
+        if verbose if verbose is not None else gc.VERBOSE:
             print(f"CR transitions. c:{ct:1.2f}, r:{rt:1.2f} -> c*r:{prod:1.2f}")
         self.cr_score = prod
         return rt, ct
@@ -259,32 +270,135 @@ class MultiSeqAlignment:
         # TODO: invent file format and save proteoforms + meta information
 
 
+# ------------------------------------------------------------------------
+
 class LinkageMat:
     """Class that caches a linkage matrix of given type to avoid unnecessary recalculations."""
 
     def __init__(self) -> None:
         """Constructor."""
         self.dist_mat = None
-        self.dmat_changed = True
+        self.distmat_changed = True
         self.link_mat = None
         self.link_cmethod = ""
 
     def mat_changed(self):
-        self.dmat_changed = True
+        self.distmat_changed = True
 
     def get(self, mat: np.ndarray, cmethod: str):
         """Returns the distance matrix for the given mat."""
         lmat_changed = False
-        if self.dmat_changed:
+        if self.distmat_changed:
             if gc.VERBOSE: print("Calculating distance matrix")
-            self.dst_mat = pdist(mat, metric='hamming')
-            self.dmat_changed =  False
+            self.dist_mat = pdist(mat, metric='hamming')
+            self.distmat_changed =  False
             lmat_changed = True
 
         if lmat_changed or self.link_cmethod != cmethod:
             if gc.VERBOSE: print("Calculating linkage matrix")
-            self.link_mat = linkage(self.dst_mat, method=cmethod)
+            self.link_mat = linkage(self.dist_mat, method=cmethod)
             self.link_cmethod =  cmethod
 
         return self.link_mat
+
+
+# ------------------------------------------------------------------------
+
+class MSASeqValueType(Enum):
+    ID = 1
+    INDEX_MAT = 2
+    INDEX_DENDRO = 3
+
+
+# ------------------------------------------------------------------------
+
+class SequenceIndexer:
+    """Stores a list of sequence names and their order. Provides access methods via index, id and name."""
+
+    def __int__(self):
+        """Constructor."""
+        self.seqid_text_list = None # list of tuples (seq_id, text)
+        self.indices_mat = None
+        self.indices_dendro = None
+
+        self.count = 0
+        self.idx_mat_changed = True
+
+        self.selected_id = None
+
+    def init(self, id_name_list: np.array, indices: np.array = None):
+        # TODO parse id name list into separate lists
+        self.count = len(id_name_list)
+        self.seqid_text_list = [(s.split()[0], ' '.join(s.split()[1:])) for s in id_name_list]
+
+        self.seq_indices = indices
+        if indices is not None:
+            self.indices_mat = indices
+        else:
+            self.indices_mat = [i for i in range(self.count)]
+
+    def get_seq_info(self, value, val_type: MSASeqValueType):
+        if value is None or val_type is None: raise ValueError
+        seq_id = None
+        if val_type == MSASeqValueType.ID:
+            seq_id = value
+        elif val_type == MSASeqValueType.INDEX_MAT:
+            seq_id = self.get_seqid_from_matidx(value)
+        elif val_type == MSASeqValueType.INDEX_DENDRO:
+            seq_id = self.get_seqid_from_dendroidx(value)
+        else:
+            raise ValueError
+
+        return self.get_seq_infos_from_id(seq_id)
+
+    def get_selected(self):
+        """Returns the index, ID and name of the currently selected sequence."""
+        raise NotImplemented
+
+    # def select_next(self):
+
+    def get_seq_infos_containing_string(self, search_string):
+        search_string = search_string.lower()
+        filtered_tuples = [(first, rest) for first, rest in self.seqid_text_list if
+                           search_string in first.lower() or search_string in rest.lower()]
+        return filtered_tuples
+
+    def get_seq_infos_from_id(self, seq_id) -> list:
+        idx = self._get_list_position_from_seqid(seq_id)
+        return self.seqid_text_list[idx] if idx is not None else None
+
+    # --- seq id to index
+
+    def _get_list_position_from_seqid(self, seq_id):
+        positions = [index for index, (first, _) in enumerate(self.seqid_text_list) if first == seq_id]
+        return positions[0] if positions else None
+
+    def get_matidx_from_seqid(self, seq_id: int):
+        if self.indices_mat is None:
+            return None
+        idx = self._get_list_position_from_seqid(seq_id)
+        return self.indices_mat[idx]
+
+    def get_dendroidx_from_seqid(self, seq_id: int):
+        if self.indices_dendro is None:
+            return None
+        idx = self._get_list_position_from_seqid(seq_id)
+        return self.indices_dendro[idx]
+
+    # --- index to seq id
+
+    def get_seqid_from_matidx(self, idx: int):
+        raise NotImplemented
+
+    def get_seqid_from_dendroidx(self, idx: int):
+        raise NotImplemented
+
+    # --- setter
+
+    def set_indices_dendro(self, dendro_indices):
+        self.indices_dendro = dendro_indices
+
+    def set_indices_mat(self, mat_indices):
+        self.indices_mat = mat_indices
+
 

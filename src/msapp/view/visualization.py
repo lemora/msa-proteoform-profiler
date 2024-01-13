@@ -159,8 +159,8 @@ def create_cluster_consensus_visualization(seqs: list[list], cluster_sizes: list
     """Shows the consensus of a number of sequence clusters based on similarity."""
     num_blocks = len(seqs)
     row_len = len(seqs[0])
-    goal_height = int(row_len/3)
-    min_blocksize = int(goal_height/20)
+    goal_height = int(row_len / 3)
+    min_blocksize = int(goal_height / 20)
     if cluster_sizes is None:
         rows_per_block = int(row_len / (3 * num_blocks))
         cluster_sizes = [rows_per_block for _ in range(num_blocks)]
@@ -169,9 +169,9 @@ def create_cluster_consensus_visualization(seqs: list[list], cluster_sizes: list
         block_factor = int(goal_height / curr_height)
         block_divisor = int(curr_height / goal_height)
         if block_factor > 1:
-            cluster_sizes = [max(i*block_factor, min_blocksize) for i in cluster_sizes]
+            cluster_sizes = [max(i * block_factor, min_blocksize) for i in cluster_sizes]
         elif block_divisor > 1:
-            cluster_sizes = [max(int(i/block_divisor), min_blocksize) for i in cluster_sizes]
+            cluster_sizes = [max(int(i / block_divisor), min_blocksize) for i in cluster_sizes]
 
     height = sum(cluster_sizes)
 
@@ -248,8 +248,8 @@ def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.
     plt.axvline(x=dheight, linestyle='--', color='gray', label='Desired Clusters')
 
     xticks = np.linspace(0, 10, num=11)
-    xlabels = ["leaves" if i == 0 else "root" if i == 10 else f"{(i/10):1.1f}" for i in xticks]
-    ax.set_xticks(xticks/10, labels=xlabels)
+    xlabels = ["leaves" if i == 0 else "root" if i == 10 else f"{(i / 10):1.1f}" for i in xticks]
+    ax.set_xticks(xticks / 10, labels=xlabels)
     plt.xlabel('Normalized distance in dendogram')
     plt.ylabel('Number of clusters')
     # plt.yscale('log')
@@ -258,6 +258,8 @@ def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.
 
 
 empty_plot = None
+
+
 def get_empty_plot():
     """Returns an empty plot. Mainly for resetting GUI canvases."""
     # global empty_plot
@@ -265,7 +267,7 @@ def get_empty_plot():
     fig, ax = plt.subplots()
     ax.axis("off")
     plt.xticks([]), plt.yticks([])
-    empty_plot =  fig
+    empty_plot = fig
     return empty_plot
 
 

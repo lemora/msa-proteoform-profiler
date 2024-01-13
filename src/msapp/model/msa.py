@@ -94,7 +94,6 @@ class MultiSeqAlignment:
         self._post_op()
         return True
 
-
     def get_seq_indexer(self):
         return self.seq_indexer
 
@@ -125,7 +124,6 @@ class MultiSeqAlignment:
         self.ncols = self._mat.shape[1]
         if should_show: self.visualize(f"Removed empty columns")
         self._post_op()
-
 
     # ------ sort operations
 
@@ -244,7 +242,6 @@ class MultiSeqAlignment:
         addstr = "" if title_addon == "" else f": {title_addon}"
         show(self._mat, f"MSA{addstr} (1 seq/row, white=gap)")
 
-
     def get_mat(self, hide_empty_cols: bool = False, reorder_rows: bool = False) -> np.array:
         """Creates a copy of the matrix, hides empty columns and reorders rows if specified, then returns it."""
         if not self.initialized or self._mat is None:
@@ -268,8 +265,8 @@ class MultiSeqAlignment:
     def save_to_file(self, filename: str) -> None:
         """Saves the final alignment image as well as the identified proteoform information."""
         imgsave(self._mat, filename)
-        print(
-            f"Wrote filtered alignment image to file out/{filename}.png")  # TODO: save annotated image to file  #
+        print(f"Wrote filtered alignment image to file out/{filename}.png")
+        # TODO: save annotated image to file
         # TODO: invent file format and save proteoforms + meta information
 
 
@@ -317,7 +314,7 @@ class SequenceIndexer:
     """Stores a list of sequence names and their order. Provides access methods via index, id and name."""
 
     def __init__(self):
-        self.seqid_text_list = None # list of tuples (seq_id, text)
+        self.seqid_text_list = None  # list of tuples (seq_id, text)
         self.indices_mat = None
         self.indices_dendro = None
         self.selected_id = None
@@ -400,5 +397,3 @@ class SequenceIndexer:
 
     def set_indices_mat(self, mat_indices):
         self.indices_mat = mat_indices
-
-

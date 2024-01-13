@@ -39,6 +39,7 @@ def remove_seqs_from_alignment(mat, idx_list: np.ndarray[int], cols: bool = True
     filtered = np.delete(mat, idx_list, axis=(1 if cols else 0))
     return filtered
 
+
 def clear_seqs_in_alignment(mat, idx_list: np.ndarray[int]) -> np.array:
     """Removes the columns (else rows) which have the given indices.
     param cols: should remove columns, else remove rows."""

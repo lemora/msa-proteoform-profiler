@@ -41,7 +41,9 @@ def run() -> None:
 
     # --- remove sequences that are much too long; > 3 sigma
 
-    def sort_by(row): return sum(row)
+    def sort_by(row):
+        return sum(row)
+
     msa.filter_by_length_statistic()
     msa.remove_empty_cols(should_show=gc.DISPLAY)
 
@@ -67,4 +69,3 @@ def run() -> None:
         msa.sort_by_metric(sorting_metric=sort_by)
 
     if p.save: msa.save_to_file("proteoform-img")
-

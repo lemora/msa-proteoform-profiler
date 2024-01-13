@@ -39,6 +39,15 @@ def remove_seqs_from_alignment(mat, idx_list: np.ndarray[int], cols: bool = True
     filtered = np.delete(mat, idx_list, axis=(1 if cols else 0))
     return filtered
 
+def clear_seqs_in_alignment(mat, idx_list: np.ndarray[int]) -> np.array:
+    """Removes the columns (else rows) which have the given indices.
+    param cols: should remove columns, else remove rows."""
+    if len(idx_list) == 0: return mat
+    if min(idx_list) < 0 or max(idx_list) >= mat.shape[0]:
+        raise ValueError("The indices to delete must be between 0 and max row or col count.")
+    mat[idx_list] = 1
+    return mat
+
 
 def sort_by_metric(mat, sorting_metric=lambda row: sum(row)) -> np.array:
     """Sorts a MSA binary matrix by the given function that works on a binary list."""

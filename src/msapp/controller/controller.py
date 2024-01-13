@@ -16,6 +16,7 @@ class Controller:
 
         self.hide_empty_cols = False
         self.reorder_rows = False
+        self.highlight_selected_seq = False
         self.dendro_hcutoff = 0.75
         self.selected_seq = -1
 
@@ -26,14 +27,13 @@ class Controller:
         self.dclustercount_changed = True
 
     def start(self):
-        """Starts the GUI."""
+        """Starts the main loop of the GUI."""
         if self.gui is None:
             self.gui = App(controller=self)
             self.gui.mainloop()
 
     def initialize_from_file(self, filename: str):
-        """Creates and initializes a MultiSeqAlignment object from a given file name and if successful,
-        shows the corresponding plots in the GUI."""
+        """Creates and initializes a MultiSeqAlignment object from a given file name."""
         try:
             msa = MultiSeqAlignment(filename)
         except Exception as e:
@@ -88,6 +88,11 @@ class Controller:
         self.reorder_rows = should_reorder
         self.msa_changed = True
 
+    def toggle_highlight_selected_seq(self, should_highlight: bool = False):
+        self.highlight_selected_seq = should_highlight
+        if self.selected_seq != -1:
+            self.msa_changed = True
+
     def set_dendro_hcutoff(self, dendro_hcutoff: float):
         if self.dendro_hcutoff == dendro_hcutoff:
             return
@@ -100,9 +105,18 @@ class Controller:
         if self.selected_seq == selected_seq:
             return
         self.selected_seq = selected_seq
+        if self.highlight_selected_seq:
+            self.msa_changed = True
 
-    def get_selected_seq_mat_idx(self):
+    def get_selseq_matidx(self):
+        """Retrieves the index of the currently selected sequence in the MSA mat."""
         idx = -1
+        if self.selected_seq != -1 and self.highlight_selected_seq:
+            seq_indexer = self.msa.get_seq_indexer()
+            if self.reorder_rows:
+                idx = seq_indexer.get_dendroidx_from_seqid(self.selected_seq)
+            else:
+                idx = seq_indexer.get_matidx_from_seqid(self.selected_seq)
         return idx
 
     def on_show_msa_mat(self, force: bool = False):
@@ -113,7 +127,7 @@ class Controller:
         mat = self.msa.get_mat(self.hide_empty_cols, self.reorder_rows)
         if mat is not None:
             wh_ratio = self.gui.get_mat_frame_wh_ratio()
-            resized = create_resized_mat_visualization(mat, wh_ratio, self.get_selected_seq_mat_idx())
+            resized = create_resized_mat_visualization(mat, wh_ratio, self.get_selseq_matidx())
             fig = show_as_subimages(resized, "")
             self.gui.show_matrix(fig)
             self.msa_changed = False

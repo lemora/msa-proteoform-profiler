@@ -8,7 +8,7 @@ from scipy.spatial.distance import pdist
 from scipy.stats import mode
 
 import msapp.gconst as gc
-from msapp.model.mat_manipulation import remove_empty_cols, remove_seqs_from_alignment, sort_by_metric
+from msapp.model.mat_manipulation import remove_empty_cols, clear_seqs_in_alignment, sort_by_metric
 from msapp.view.visualization import create_cluster_consensus_visualization, imgsave, show, show_hist, \
     visualize_clusters
 
@@ -111,11 +111,9 @@ class MultiSeqAlignment:
 
         over_three_std = median + 3 * std
         seqs_over_three_std = np.array([idx for idx, l in enumerate(seq_lengths) if l > over_three_std])
-        self._mat = remove_seqs_from_alignment(self._mat, idx_list=seqs_over_three_std, cols=False)
-        self.nrows = self._mat.shape[0]
-        self.ncols = self._mat.shape[1]
+        self._mat = clear_seqs_in_alignment(self._mat, idx_list=seqs_over_three_std)
+        self.seq_indexer.set_indices_dendro(None)
         self.linkage_mat.mat_changed()
-        self._csort_indices = None
 
         if gc.DISPLAY: self.visualize(rf"Removed {len(seqs_over_three_std)} seqs > 3 $\sigma$ length")
         self._post_op()
@@ -256,11 +254,16 @@ class MultiSeqAlignment:
         if hide_empty_cols:
             mat = remove_empty_cols(mat)
         if reorder_rows:
-            if self._csort_indices is None:
-                cluster_labels = fcluster(self.get_linkage_mat(), t=0, criterion='distance')
-                self._csort_indices = np.argsort(cluster_labels)
-            mat = mat[self._csort_indices]
+            self._refresh_dendro_indices()
+            indices_dendro = self.seq_indexer.get_indices_dendro()
+            mat = mat[indices_dendro]
         return mat
+
+    def _refresh_dendro_indices(self):
+        if self.seq_indexer.get_indices_dendro() is None:
+            cluster_labels = fcluster(self.get_linkage_mat(), t=0, criterion='distance')
+            self._csort_indices = np.argsort(cluster_labels)
+            self.seq_indexer.set_indices_dendro(self._csort_indices)
 
     def save_to_file(self, filename: str) -> None:
         """Saves the final alignment image as well as the identified proteoform information."""
@@ -276,29 +279,27 @@ class LinkageMat:
     """Class that caches a linkage matrix of given type to avoid unnecessary recalculations."""
 
     def __init__(self) -> None:
-        """Constructor."""
         self.dist_mat = None
-        self.distmat_changed = True
         self.link_mat = None
         self.link_cmethod = ""
 
     def mat_changed(self):
-        self.distmat_changed = True
+        self.dist = True
+
+    def _update_if_needed(self, mat: np.ndarray, cmethod: str = "complete") -> None:
+        if self.dist_mat is None:
+            if gc.VERBOSE: print("Calculating distance matrix")
+            self.dist_mat = pdist(mat, metric='hamming')
+            self.link_mat = None
+
+        if self.link_mat is None or self.link_cmethod != cmethod:
+            if gc.VERBOSE: print("Calculating linkage matrix")
+            self.link_mat = linkage(self.dist_mat, method=cmethod)
+            self.link_cmethod = cmethod
 
     def get(self, mat: np.ndarray, cmethod: str):
         """Returns the distance matrix for the given mat."""
-        lmat_changed = False
-        if self.distmat_changed:
-            if gc.VERBOSE: print("Calculating distance matrix")
-            self.dist_mat = pdist(mat, metric='hamming')
-            self.distmat_changed =  False
-            lmat_changed = True
-
-        if lmat_changed or self.link_cmethod != cmethod:
-            if gc.VERBOSE: print("Calculating linkage matrix")
-            self.link_mat = linkage(self.dist_mat, method=cmethod)
-            self.link_cmethod =  cmethod
-
+        self._update_if_needed(mat, cmethod)
         return self.link_mat
 
 
@@ -315,29 +316,20 @@ class MSASeqValueType(Enum):
 class SequenceIndexer:
     """Stores a list of sequence names and their order. Provides access methods via index, id and name."""
 
-    def __int__(self):
-        """Constructor."""
+    def __init__(self):
         self.seqid_text_list = None # list of tuples (seq_id, text)
         self.indices_mat = None
         self.indices_dendro = None
-
-        self.count = 0
-        self.idx_mat_changed = True
-
         self.selected_id = None
 
-    def init(self, id_name_list: np.array, indices: np.array = None):
-        # TODO parse id name list into separate lists
-        self.count = len(id_name_list)
+    def init(self, id_name_list: np.array) -> None:
+        """Initialization.
+        param id_name_list: list of strings, each consisting of at least two words (seq id and description)."""
         self.seqid_text_list = [(s.split()[0], ' '.join(s.split()[1:])) for s in id_name_list]
+        self.indices_mat = [i for i in range(len(id_name_list))]
 
-        self.seq_indices = indices
-        if indices is not None:
-            self.indices_mat = indices
-        else:
-            self.indices_mat = [i for i in range(self.count)]
-
-    def get_seq_info(self, value, val_type: MSASeqValueType):
+    def get_seq_info(self, value, val_type: MSASeqValueType) -> tuple:
+        """Returns the ID and description of the requested sequence."""
         if value is None or val_type is None: raise ValueError
         seq_id = None
         if val_type == MSASeqValueType.ID:
@@ -351,35 +343,38 @@ class SequenceIndexer:
 
         return self.get_seq_infos_from_id(seq_id)
 
-    def get_selected(self):
-        """Returns the index, ID and name of the currently selected sequence."""
-        raise NotImplemented
+    def get_selected(self) -> tuple:
+        """Returns the ID and description of the currently selected sequence."""
+        return self.get_seq_infos_from_id(self.selected_id)
 
-    # def select_next(self):
-
-    def get_seq_infos_containing_string(self, search_string):
+    def get_seq_infos_containing_string(self, search_string) -> list:
+        """Returns a list of (seq_id:str,description:str) tuples for sequences where one of the two fields
+        contains the given search_string (case agnostic)."""
         search_string = search_string.lower()
         filtered_tuples = [(first, rest) for first, rest in self.seqid_text_list if
                            search_string in first.lower() or search_string in rest.lower()]
         return filtered_tuples
 
-    def get_seq_infos_from_id(self, seq_id) -> list:
+    def get_seq_infos_from_id(self, seq_id) -> tuple:
         idx = self._get_list_position_from_seqid(seq_id)
         return self.seqid_text_list[idx] if idx is not None else None
 
     # --- seq id to index
 
-    def _get_list_position_from_seqid(self, seq_id):
+    def _get_list_position_from_seqid(self, seq_id) -> int:
+        """Returns the original position in the list of sequences for the given sequence ID."""
         positions = [index for index, (first, _) in enumerate(self.seqid_text_list) if first == seq_id]
         return positions[0] if positions else None
 
-    def get_matidx_from_seqid(self, seq_id: int):
+    def get_matidx_from_seqid(self, seq_id: int) -> int:
+        """Returns the row index in the msa matrix for the given sequence ID."""
         if self.indices_mat is None:
             return None
         idx = self._get_list_position_from_seqid(seq_id)
         return self.indices_mat[idx]
 
-    def get_dendroidx_from_seqid(self, seq_id: int):
+    def get_dendroidx_from_seqid(self, seq_id: int) -> int:
+        """Returns the row index in the dendro-sorted matrix for the given sequence ID."""
         if self.indices_dendro is None:
             return None
         idx = self._get_list_position_from_seqid(seq_id)
@@ -392,6 +387,11 @@ class SequenceIndexer:
 
     def get_seqid_from_dendroidx(self, idx: int):
         raise NotImplemented
+
+    # --- getter
+
+    def get_indices_dendro(self):
+        return self.indices_dendro
 
     # --- setter
 

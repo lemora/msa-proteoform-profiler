@@ -212,10 +212,18 @@ class App(ctki.CTk):
 
         # selected sequence
         self.selected_seq_label = ctki.CTkLabel(self.tabview.tab("SingleSeq"), text="Selected sequence:",
-                                                font=ctki.CTkFont(size=15), text_color="gray")
+                                                font=ctki.CTkFont(size=14), text_color="gray")
         self.selected_seq_label.grid(row=1, column=0, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nw")
-        self.selected_seq_textfield = ctki.CTkTextbox(self.tabview.tab("SingleSeq"), font=ctki.CTkFont(size=15), fg_color="transparent")
+        self.selected_seq_textfield = ctki.CTkTextbox(self.tabview.tab("SingleSeq"), font=ctki.CTkFont(size=14),
+                                                      fg_color="transparent", height=100)
         self.selected_seq_textfield.grid(row=3, column=0, columnspan=2, padx=(5, 0), pady=(5, 0), sticky="ew")
+
+        self.checkbox_var_highlight_selected_seq = ctki.BooleanVar()
+        self.checkbox_highlight_selected_seq = ctki.CTkCheckBox(self.tabview.tab("SingleSeq"), text="Show selected sequence",
+                                                                command=self.on_highlight_selected_seq,
+                                                                variable=self.checkbox_var_highlight_selected_seq, onvalue=True,
+                                                                offvalue=False)
+        self.checkbox_highlight_selected_seq.grid(row=4, column=0, columnspan=2, pady=(0, 0), padx=(10, 10), sticky="nw")
 
         # ------ info frame
 
@@ -302,10 +310,7 @@ class App(ctki.CTk):
             self.controller.on_show_dendrogram(force=True)
             self.last_mat_frame_hwratio = curr_mfratio
 
-    def on_open_search_seq_dialog(self):
-        SeqSearchDialogue(self, title="Select a Sequence")
-
-    # ------ calling the controller
+    # ------ callbacks triggered by user interactions
 
     def on_save(self):
         msg = "'Save' clicked, but not yet implemented."
@@ -320,6 +325,7 @@ class App(ctki.CTk):
         if not success: return
         self.dendro_cutoff_spinbox.set_highlighted(0.75)
         self.controller.set_dendro_hcutoff(0.75)
+        self.controller.set_selected_seq(-1)
 
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
@@ -333,6 +339,7 @@ class App(ctki.CTk):
         self.seq_count_value.configure(text=self.controller.msa.nrows)
         self.msa_length_value.configure(text=self.controller.msa.ncols)
         self.button_choose_seq.configure(state="normal")
+        self.set_selected_seq_info(" ")
 
     def on_filter_msa(self):
         msa_filter_type = self.filter_msa_selector.get()
@@ -354,6 +361,11 @@ class App(ctki.CTk):
         self.controller.toggle_reorder_mat_rows(reorder)
         self.controller.on_show_msa_mat()
 
+    def on_highlight_selected_seq(self):
+        highlight_seq = self.checkbox_var_highlight_selected_seq.get()
+        self.controller.toggle_highlight_selected_seq(highlight_seq)
+        self.controller.on_show_msa_mat()
+
     def on_dendro_height_change(self):
         val = self.dendro_cutoff_spinbox.get()
         highlight_val = self.dendro_cutoff_spinbox.highlight_val
@@ -365,15 +377,19 @@ class App(ctki.CTk):
         self.controller.on_show_consensus()
         self.controller.on_show_dendro_clustercount()
 
+    def on_open_search_seq_dialog(self):
+        SeqSearchDialogue(self, title="Select a Sequence")
+
     def on_seq_selection(self, seq_id: str):
-        self.controller.set_selected_seq(seq_id)
         seq_indexer = self.controller.get_seq_indexer()
         if seq_indexer is None:
             return
         info = seq_indexer.get_seq_infos_from_id(seq_id)
         if info is not None:
+            self.controller.set_selected_seq(seq_id)
             seq_info_text = f"{info[0]}\n{info[1]}"
             self.set_selected_seq_info(seq_info_text)
+            self.controller.on_show_msa_mat()
 
     # ------ called by controller
 
@@ -517,7 +533,7 @@ class SeqSearchDialogue(ctki.CTkToplevel):
         if self.seq_indexer is None:
             return []
         matching_seqs = self.seq_indexer.get_seq_infos_containing_string(the_str)
-        matching_seqs.sort(key=lambda tup: tup[0])
+        # matching_seqs.sort(key=lambda tup: tup[0])
         return matching_seqs
 
     def set_to_listbox(self, data: list) -> None:

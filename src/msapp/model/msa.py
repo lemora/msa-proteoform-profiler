@@ -26,7 +26,6 @@ class MultiSeqAlignment:
         self.ncols: int = -1
         self._ridx: np.array = []  # list of row indices
         self._cidx: np.array = []  # list of col indices
-        self._csort_indices = None
         self.linkage_mat = LinkageMat()
         self.seq_indexer = SequenceIndexer()
         self.cr_score = None
@@ -111,7 +110,7 @@ class MultiSeqAlignment:
         over_three_std = median + 3 * std
         seqs_over_three_std = np.array([idx for idx, l in enumerate(seq_lengths) if l > over_three_std])
         self._mat = clear_seqs_in_alignment(self._mat, idx_list=seqs_over_three_std)
-        self.seq_indexer.set_indices_dendro(None)
+        self.seq_indexer.indices_dendro_changed()
         self.linkage_mat.mat_changed()
 
         if gc.DISPLAY: self.visualize(rf"Removed {len(seqs_over_three_std)} seqs > 3 $\sigma$ length")
@@ -141,6 +140,7 @@ class MultiSeqAlignment:
         """Process the alignment by passing the current alignment matrix into the given image processing function."""
         mat = img_fun(img=self._mat, *args, **kwargs)
         self._mat = mat
+        self.seq_indexer.indices_dendro_changed()
         self.linkage_mat.mat_changed()
         self._post_op()
 
@@ -259,8 +259,8 @@ class MultiSeqAlignment:
     def _refresh_dendro_indices(self):
         if self.seq_indexer.get_indices_dendro() is None:
             cluster_labels = fcluster(self.get_linkage_mat(), t=0, criterion='distance')
-            self._csort_indices = np.argsort(cluster_labels)
-            self.seq_indexer.set_indices_dendro(self._csort_indices)
+            dendro_indices = np.argsort(cluster_labels)
+            self.seq_indexer.set_indices_dendro(dendro_indices)
 
     def save_to_file(self, filename: str) -> None:
         """Saves the final alignment image as well as the identified proteoform information."""
@@ -281,7 +281,8 @@ class LinkageMat:
         self.link_cmethod = ""
 
     def mat_changed(self):
-        self.dist = True
+        self.dist_mat = None
+        self.link_mat = None
 
     def _update_if_needed(self, mat: np.ndarray, cmethod: str = "complete") -> None:
         if self.dist_mat is None:
@@ -375,7 +376,8 @@ class SequenceIndexer:
         if self.indices_dendro is None:
             return None
         idx = self._get_list_position_from_seqid(seq_id)
-        return self.indices_dendro[idx]
+        dendro_idx = np.where(self.indices_dendro == idx)[0][0]
+        return dendro_idx
 
     # --- index to seq id
 
@@ -391,6 +393,9 @@ class SequenceIndexer:
         return self.indices_dendro
 
     # --- setter
+
+    def indices_dendro_changed(self):
+        self.indices_dendro = None
 
     def set_indices_dendro(self, dendro_indices):
         self.indices_dendro = dendro_indices

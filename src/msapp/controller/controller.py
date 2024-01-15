@@ -32,6 +32,9 @@ class Controller:
             self.gui = App(controller=self)
             self.gui.mainloop()
 
+
+    # --- configure/trigger state changes
+
     def initialize_from_file(self, filename: str):
         """Creates and initializes a MultiSeqAlignment object from a given file name."""
         try:
@@ -77,22 +80,6 @@ class Controller:
         self.consensus_changed = True
         self.dclustercount_changed = True
 
-    def is_mat_initialized(self):
-        return self.msa is not None and self.msa.initialized
-
-    def toggle_hide_empty_cols(self, should_hide: bool = False):
-        self.hide_empty_cols = should_hide
-        self.msa_changed = True
-
-    def toggle_reorder_mat_rows(self, should_reorder: bool = False):
-        self.reorder_rows = should_reorder
-        self.msa_changed = True
-
-    def toggle_highlight_selected_seq(self, should_highlight: bool = False):
-        self.highlight_selected_seq = should_highlight
-        if self.selected_seq != -1:
-            self.msa_changed = True
-
     def set_dendro_hcutoff(self, dendro_hcutoff: float):
         if self.dendro_hcutoff == dendro_hcutoff:
             return
@@ -101,14 +88,33 @@ class Controller:
         self.consensus_changed = True
         self.dclustercount_changed = True
 
-    def set_selected_seq(self, selected_seq: str):
-        if self.selected_seq == selected_seq:
-            return
-        self.selected_seq = selected_seq
-        if self.highlight_selected_seq:
-            self.msa_changed = True
+    # --- sequence selection
 
-    def get_selseq_matidx(self):
+    def on_seq_selection(self, seq_id: str):
+        seq_indexer = self.get_seq_indexer()
+        if seq_indexer is None or seq_id == self.selected_seq:
+            return
+        info = seq_indexer.get_infos_for_seq_id(seq_id)
+        if info is not None:
+            self.selected_seq = seq_id
+            self.gui.set_selected_seq_info(f"{seq_id}\n{info[0]}")
+            idx = info[2] if self.reorder_rows else info[1]
+            self.gui.set_slider_value(idx)
+            if self.highlight_selected_seq:
+                self.msa_changed = True
+
+    def reset_selected_seq(self):
+        self.selected_seq = -1
+        self.gui.set_slider_value(0)
+
+    def select_ith_seqid(self, i):
+        if self.reorder_rows:
+            seq_id = self.msa.get_seq_indexer().get_ith_seqid_dendro(i)
+        else:
+            seq_id = self.msa.get_seq_indexer().get_ith_seqid_mat(i)
+        self.on_seq_selection(seq_id)
+
+    def get_selseq_idx(self):
         """Retrieves the index of the currently selected sequence in the MSA mat."""
         idx = -1
         if self.selected_seq != -1 and self.highlight_selected_seq:
@@ -119,6 +125,26 @@ class Controller:
                 idx = seq_indexer.get_matidx_from_seqid(self.selected_seq)
         return idx
 
+
+    # --- toggle mat display options
+
+    def toggle_hide_empty_cols(self, should_hide: bool = False):
+        self.hide_empty_cols = should_hide
+        self.msa_changed = True
+
+    def toggle_reorder_mat_rows(self, should_reorder: bool = False):
+        self.reorder_rows = should_reorder
+        self.msa_changed = True
+        self.gui.set_slider_value(self.get_selseq_idx())
+
+    def toggle_highlight_selected_seq(self, should_highlight: bool = False):
+        self.highlight_selected_seq = should_highlight
+        if self.selected_seq != -1:
+            self.msa_changed = True
+
+
+    # --- display graphs
+
     def on_show_msa_mat(self, force: bool = False):
         """Controller is ordered to fetch an MSA matrix visualization figure and forward it to the GUI."""
         if not self.is_mat_initialized(): return
@@ -127,7 +153,7 @@ class Controller:
         mat = self.msa.get_mat(self.hide_empty_cols, self.reorder_rows)
         if mat is not None:
             wh_ratio = self.gui.get_mat_frame_wh_ratio()
-            resized = create_resized_mat_visualization(mat, wh_ratio, self.get_selseq_matidx())
+            resized = create_resized_mat_visualization(mat, wh_ratio, self.get_selseq_idx())
             fig = show_as_subimages(resized, "")
             self.gui.show_matrix(fig)
             self.msa_changed = False
@@ -162,5 +188,12 @@ class Controller:
         self.gui.show_dendro_clustercount(fig)
         self.consensus_changed = False
 
+
+    # --- query state
+
     def get_seq_indexer(self):
         return self.msa.get_seq_indexer() if self.is_mat_initialized() else None
+
+
+    def is_mat_initialized(self):
+        return self.msa is not None and self.msa.initialized

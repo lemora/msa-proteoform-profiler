@@ -204,12 +204,15 @@ class App(ctk.CTk):
         self.button_choose_seq.grid(row=0, column=0, columnspan=2, padx=(0, 10), pady=(15, 0))
 
         # selected sequence
+        self.seq_slider = ctk.CTkSlider(self.tabview.tab("SingleSeq"), from_=0, to=100, command=self.on_slider_event)
+        self.seq_slider.grid(row=1, column=0, columnspan=2, padx=(5, 0), pady=(5, 0), sticky="ew")
+
         self.selected_seq_label = ctk.CTkLabel(self.tabview.tab("SingleSeq"), text="Selected sequence:",
                                                font=ctk.CTkFont(size=14), text_color="gray")
-        self.selected_seq_label.grid(row=1, column=0, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nw")
+        self.selected_seq_label.grid(row=2, column=0, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nw")
         self.selected_seq_textfield = ctk.CTkTextbox(self.tabview.tab("SingleSeq"), font=ctk.CTkFont(size=14),
                                                      fg_color="transparent", height=100)
-        self.selected_seq_textfield.grid(row=3, column=0, columnspan=2, padx=(5, 0), pady=(5, 0), sticky="ew")
+        self.selected_seq_textfield.grid(row=4, column=0, columnspan=2, padx=(5, 0), pady=(5, 0), sticky="ew")
 
         self.checkbox_var_highlight_selected_seq = ctk.BooleanVar()
         self.checkbox_highlight_selected_seq = ctk.CTkCheckBox(self.tabview.tab("SingleSeq"),
@@ -217,8 +220,11 @@ class App(ctk.CTk):
                                                                command=self.on_highlight_selected_seq,
                                                                variable=self.checkbox_var_highlight_selected_seq,
                                                                onvalue=True, offvalue=False)
-        self.checkbox_highlight_selected_seq.grid(row=4, column=0, columnspan=2, pady=(0, 0), padx=(10, 10),
+        self.checkbox_highlight_selected_seq.grid(row=5, column=0, columnspan=2, pady=(0, 0), padx=(10, 10),
                                                   sticky="nw")
+
+        # self.seq_slider = ctk.CTkSlider(self.tabview.tab("SingleSeq"), from_=0, to=100, command=self.on_slider_event)
+        # self.seq_slider.grid(row=5, column=0, columnspan=2, padx=(5, 0), pady=(5, 0), sticky="ew")
 
         # ------ info frame
 
@@ -282,6 +288,8 @@ class App(ctk.CTk):
 
         self.button_choose_seq.configure(state="disabled")
         self.selected_seq_textfield.configure(state="disabled")
+        self.seq_slider.set(0)
+        self.seq_slider.configure(state="disabled")
 
         self.textbox.configure(state="disabled")
         self.last_mat_frame_hwratio = 0
@@ -322,7 +330,7 @@ class App(ctk.CTk):
         if not success: return
         self.dendro_cutoff_spinbox.set_highlighted(0.75)
         self.controller.set_dendro_hcutoff(0.75)
-        self.controller.set_selected_seq(-1)
+        self.controller.reset_selected_seq()
 
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
@@ -337,6 +345,8 @@ class App(ctk.CTk):
         self.msa_length_value.configure(text=self.controller.msa.ncols)
         self.button_choose_seq.configure(state="normal")
         self.set_selected_seq_info(" ")
+        self.seq_slider.configure(state="normal")
+        self.seq_slider.configure(to=self.controller.msa.nrows-1)
 
     def on_filter_msa(self):
         msa_filter_type = self.filter_msa_selector.get()
@@ -359,8 +369,8 @@ class App(ctk.CTk):
         self.controller.on_show_msa_mat()
 
     def on_highlight_selected_seq(self):
-        highlight_seq = self.checkbox_var_highlight_selected_seq.get()
-        self.controller.toggle_highlight_selected_seq(highlight_seq)
+        should_highlight = self.checkbox_var_highlight_selected_seq.get()
+        self.controller.toggle_highlight_selected_seq(should_highlight)
         self.controller.on_show_msa_mat()
 
     def on_dendro_height_change(self):
@@ -378,15 +388,16 @@ class App(ctk.CTk):
         SeqSearchDialogue(self, title="Select a Sequence")
 
     def on_seq_selection(self, seq_id: str):
-        seq_indexer = self.controller.get_seq_indexer()
-        if seq_indexer is None:
-            return
-        info = seq_indexer.get_seq_infos_from_id(seq_id)
-        if info is not None:
-            self.controller.set_selected_seq(seq_id)
-            seq_info_text = f"{info[0]}\n{info[1]}"
-            self.set_selected_seq_info(seq_info_text)
-            self.controller.on_show_msa_mat()
+        self.controller.on_seq_selection(seq_id)
+        self.controller.on_show_msa_mat()
+
+    def set_slider_value(self, val):
+        self.seq_slider.set(val)
+
+    def on_slider_event(self, value):
+        intval = int(value)
+        self.controller.select_ith_seqid(intval)
+        self.controller.on_show_msa_mat()
 
     # ------ called by controller
 
@@ -532,7 +543,7 @@ class SeqSearchDialogue(ctk.CTkToplevel):
         if self.seq_indexer is None:
             return []
         matching_seqs = self.seq_indexer.get_seq_infos_containing_string(the_str)
-        # matching_seqs.sort(key=lambda tup: tup[0])
+        matching_seqs.sort(key=lambda tup: tup[0])
         return matching_seqs
 
     def set_to_listbox(self, data: list) -> None:

@@ -303,102 +303,86 @@ class LinkageMat:
 
 # ------------------------------------------------------------------------
 
-class MSASeqValueType(Enum):
-    ID = 1
-    INDEX_MAT = 2
-    INDEX_DENDRO = 3
-
-
-# ------------------------------------------------------------------------
-
 class SequenceIndexer:
     """Stores a list of sequence names and their order. Provides access methods via index, id and name."""
 
     def __init__(self):
-        self.seqid_text_list = None  # list of tuples (seq_id, text)
-        self.indices_mat = None
+        self.num_entries = 0
+        self.seqid_dict = None  # key: seq_id, value: tuple (text:str, idx_mat:int, idx_dendro:int)
+        self.seqid_list = None
         self.indices_dendro = None
-        self.selected_id = None
 
     def init(self, id_name_list: np.array) -> None:
         """Initialization.
         param id_name_list: list of strings, each consisting of at least two words (seq id and description)."""
-        self.seqid_text_list = [(s.split()[0], ' '.join(s.split()[1:])) for s in id_name_list]
-        self.indices_mat = [i for i in range(len(id_name_list))]
-
-    def get_seq_info(self, value, val_type: MSASeqValueType) -> tuple:
-        """Returns the ID and description of the requested sequence."""
-        if value is None or val_type is None: raise ValueError
-        seq_id = None
-        if val_type == MSASeqValueType.ID:
-            seq_id = value
-        elif val_type == MSASeqValueType.INDEX_MAT:
-            seq_id = self.get_seqid_from_matidx(value)
-        elif val_type == MSASeqValueType.INDEX_DENDRO:
-            seq_id = self.get_seqid_from_dendroidx(value)
-        else:
-            raise ValueError
-
-        return self.get_seq_infos_from_id(seq_id)
-
-    def get_selected(self) -> tuple:
-        """Returns the ID and description of the currently selected sequence."""
-        return self.get_seq_infos_from_id(self.selected_id)
+        self.num_entries = len(id_name_list)
+        seqid_descr_list = [(s.split()[0], ' '.join(s.split()[1:])) for s in id_name_list]
+        self.seqid_list = [entry[0] for entry in seqid_descr_list]
+        self.seqid_dict = {sid: (text, idx, -1) for idx, (sid, text) in enumerate(seqid_descr_list)}
 
     def get_seq_infos_containing_string(self, search_string) -> list:
         """Returns a list of (seq_id:str,description:str) tuples for sequences where one of the two fields
         contains the given search_string (case agnostic)."""
         search_string = search_string.lower()
-        filtered_tuples = [(first, rest) for first, rest in self.seqid_text_list if
-                           search_string in first.lower() or search_string in rest.lower()]
+        filtered_tuples = [(sid, val[0]) for sid, val in self.seqid_dict.items() if
+                           search_string in sid.lower() or search_string in val[0].lower()]
         return filtered_tuples
 
-    def get_seq_infos_from_id(self, seq_id) -> tuple:
-        idx = self._get_list_position_from_seqid(seq_id)
-        return self.seqid_text_list[idx] if idx is not None else None
+    def get_infos_for_seq_id(self, seq_id) -> tuple:
+        """For the given seq_id, returns the following tuple: (description:str, idx_mat:int, idx_dendro:int)"""
+        info = self.seqid_dict[seq_id]
+        return info
+        # return (seq_id, info[0])
 
     # --- seq id to index
 
-    def _get_list_position_from_seqid(self, seq_id) -> int:
-        """Returns the original position in the list of sequences for the given sequence ID."""
-        positions = [index for index, (first, _) in enumerate(self.seqid_text_list) if first == seq_id]
-        return positions[0] if positions else None
-
     def get_matidx_from_seqid(self, seq_id: int) -> int:
         """Returns the row index in the msa matrix for the given sequence ID."""
-        if self.indices_mat is None:
+        if self.seqid_dict is None:
             return None
-        idx = self._get_list_position_from_seqid(seq_id)
-        return self.indices_mat[idx]
+        return self.seqid_dict[seq_id][1]
 
     def get_dendroidx_from_seqid(self, seq_id: int) -> int:
         """Returns the row index in the dendro-sorted matrix for the given sequence ID."""
-        if self.indices_dendro is None:
+        if self.seqid_dict is None:
             return None
-        idx = self._get_list_position_from_seqid(seq_id)
-        dendro_idx = np.where(self.indices_dendro == idx)[0][0]
-        return dendro_idx
+        return self.seqid_dict[seq_id][2]
+
+    def get_ith_seqid_mat(self, i: int) -> str:
+        """Returns the ith sequence ID in from the standard matrix sorting indices"""
+        if i is None or i == -1:
+            return self.seqid_list[0]
+        return self.seqid_list[i]
+
+    def get_ith_seqid_dendro(self, i: int) -> str:
+        """Returns the ith sequence ID in from the by-dendrogram matrix sorting indices"""
+        seq_id = [seq_id for seq_id, value in self.seqid_dict.items() if value[2] == i][0]
+        return seq_id
 
     # --- index to seq id
 
     def get_seqid_from_matidx(self, idx: int):
-        raise NotImplemented
+        return self.seqid_list[idx]
 
     def get_seqid_from_dendroidx(self, idx: int):
         raise NotImplemented
 
+    def indices_dendro_changed(self):
+        self.indices_dendro = None
+
     # --- getter
+
+    def has_indices_dendro(self):
+        return self.indices_dendro is not None
 
     def get_indices_dendro(self):
         return self.indices_dendro
 
     # --- setter
 
-    def indices_dendro_changed(self):
-        self.indices_dendro = None
-
     def set_indices_dendro(self, dendro_indices):
         self.indices_dendro = dendro_indices
-
-    def set_indices_mat(self, mat_indices):
-        self.indices_mat = mat_indices
+        for dendro_idx, mat_idx in enumerate(dendro_indices):
+            seq_id = self.get_seqid_from_matidx(mat_idx)
+            seq_tup = self.seqid_dict[seq_id]
+            self.seqid_dict[seq_id] = (seq_tup[0], seq_tup[1], dendro_idx)

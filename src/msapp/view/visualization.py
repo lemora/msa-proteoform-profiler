@@ -145,11 +145,11 @@ def highlight_row(imgmat: np.array, row_idx: int) -> np.array:
     height = len(imgmat)
 
     # highlight selected row
+    white_highlight = (255, 0, 0)  # red
+    black_highlight = (0, 89, 178)  # blue
     if 0 <= row_idx < height:
-        white_highlight = (255, 0, 0)  # red
-        black_highlight = (0, 89, 178)  # blue
         the_row = imgmat[row_idx]
-        colored_row = np.array([white_highlight if i.all() == 255 else black_highlight for i in the_row])
+        colored_row = np.array([white_highlight if (i == 255).all() else black_highlight for i in the_row])
         imgmat[row_idx] = colored_row
 
     return imgmat

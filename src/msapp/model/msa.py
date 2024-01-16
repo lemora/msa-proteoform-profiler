@@ -340,6 +340,8 @@ class SequenceIndexer:
 
     def get_infos_for_seq_id(self, seq_id) -> tuple:
         """For the given seq_id, returns the following tuple: (description:str, idx_mat:int, idx_dendro:int)"""
+        if not seq_id in self.seqid_dict:
+            return None
         info = self.seqid_dict[seq_id]
         return info
         # return (seq_id, info[0])

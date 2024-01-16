@@ -14,6 +14,7 @@ class Controller:
         self.msa = None
         self.gui = None
 
+        self.split_mat_visualization = True
         self.hide_empty_cols = False
         self.reorder_rows = False
         self.colour_clusters = False
@@ -131,6 +132,10 @@ class Controller:
 
     # --- toggle mat display options
 
+    def toggle_split_mat_visualization(self, should_split: bool = False):
+        self.split_mat_visualization = should_split
+        self.msa_changed = True
+
     def toggle_hide_empty_cols(self, should_hide: bool = False):
         self.hide_empty_cols = should_hide
         self.msa_changed = True
@@ -165,9 +170,10 @@ class Controller:
                 # TODO: consider mat vs. dendro ordering!
                 cluster_labels = self.msa.get_cluster_labels(self.dendro_hcutoff, self.reorder_rows)
                 img = color_clusters(mat, cluster_labels)
-            img_highlighted = highlight_row(img, self.get_selseq_idx())
-            img_resized = create_resized_mat_visualization(img_highlighted, wh_ratio)
-            fig = show_as_subimages(img_resized, "")
+            img = highlight_row(img, self.get_selseq_idx())
+            if self.split_mat_visualization:
+                img = create_resized_mat_visualization(img, wh_ratio, not self.colour_clusters)
+            fig = show_as_subimages(img, "")
             self.gui.show_matrix(fig)
             self.msa_changed = False
 

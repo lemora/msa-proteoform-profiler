@@ -71,7 +71,7 @@ def show_as_subimages(mat, title: str) -> Figure:
     return figure
 
 
-def create_resized_mat_visualization(image: np.array, target_ratio: float) -> np.array:
+def create_resized_mat_visualization(image: np.array, target_ratio: float, color_sep: bool = False) -> np.array:
     """Based on a given width to height ratio, this method calculates the optimal number of blocks the matrix needs to
     be split either by row or by column, so that if the blocks are concatenated in the other axis direction,
     they best approximate the given target aspect ratio.
@@ -87,24 +87,28 @@ def create_resized_mat_visualization(image: np.array, target_ratio: float) -> np
     new_ratio_row = (original_width * splits_by_row) / (original_height / splits_by_row)
     new_ratio_column = (original_width / splits_by_column) / (original_height * splits_by_column)
 
-    if abs(new_ratio_row - target_ratio) < abs(new_ratio_column - target_ratio):
+    diff = abs(new_ratio_row - target_ratio) - abs(new_ratio_column - target_ratio)
+    if abs(diff) <= 0.2:
+        split_count = 1
+        should_split_by_row = False
+    elif diff < 0:
         split_count = splits_by_row
-        split_by_row = True
+        should_split_by_row = True
     else:
         split_count = splits_by_column
-        split_by_row = False
+        should_split_by_row = False
 
     # if splitting by row is more optimal, transpose matrix before and after calling the splitting by col function
     # image = highlight_row(image, highlight_row_idx)
-    if split_by_row:
+    if should_split_by_row:
         image = cv2.transpose(image)
-    reordered_mat = create_colsplit_subimages_mat(image, split_count)
-    if split_by_row:
+    reordered_mat = create_colsplit_subimages_mat(image, split_count, color_sep)
+    if should_split_by_row:
         return cv2.transpose(reordered_mat)
     return reordered_mat
 
 
-def create_colsplit_subimages_mat(imgmat, splits: int = -1) -> np.array:
+def create_colsplit_subimages_mat(imgmat, splits: int = -1, color_sep: bool = False) -> np.array:
     """Splits an image (3 or 1 value per entry) into several ('splits' parameter) row blocks and appends them as
     column blocks. The blocks are divided by a gray border.
     An RGB image with 3 values per entry is returned."""
@@ -122,8 +126,8 @@ def create_colsplit_subimages_mat(imgmat, splits: int = -1) -> np.array:
 
     subimage_width = width // splits
     separator = np.zeros((12, subimage_width, 3), dtype=np.uint8)
-    separator[:, :] = (150, 150, 0)  # colourful border
-    # separator[:, :] = (128, 128, 128)  # gray border
+    sep_color = (150, 150, 0) if color_sep else (128, 128, 128)
+    separator[:, :] = sep_color
 
     subimages = []
     for i in range(splits):

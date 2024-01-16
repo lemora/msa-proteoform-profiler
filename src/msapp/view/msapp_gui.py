@@ -183,26 +183,33 @@ class App(ctk.CTk):
         self.button_dendro_hcutoff.grid(row=1, column=1, padx=(0, 10), pady=(10, 0))
 
         # visualization checkboxes
+        self.checkbox_var_split_mat_visualization = ctk.BooleanVar()
+        self.checkbox_split_mat_visualization = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Optimize MSA visualization",
+                                                        command=self.on_split_mat_visualization,
+                                                        variable=self.checkbox_var_split_mat_visualization, onvalue=True,
+                                                        offvalue=False)
+        self.checkbox_split_mat_visualization.grid(row=2, column=0, columnspan=2, pady=(20, 0), padx=(10, 10), sticky="nw")
+
         self.checkbox_var_hide_empty_cols = ctk.BooleanVar()
         self.checkbox_hide_empty_cols = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Hide empty columns",
                                                         command=self.on_hide_empty_cols_switch,
                                                         variable=self.checkbox_var_hide_empty_cols, onvalue=True,
                                                         offvalue=False)
-        self.checkbox_hide_empty_cols.grid(row=2, column=0, columnspan=2, pady=(20, 0), padx=(10, 10), sticky="nw")
+        self.checkbox_hide_empty_cols.grid(row=3, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
 
         self.checkbox_var_reorder_mat_rows = ctk.BooleanVar()
         self.checkbox_reorder_mat_rows = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Sort sequences",
                                                          command=self.on_reorder_mat_rows_switch,
                                                          variable=self.checkbox_var_reorder_mat_rows, onvalue=True,
                                                          offvalue=False)
-        self.checkbox_reorder_mat_rows.grid(row=3, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
+        self.checkbox_reorder_mat_rows.grid(row=4, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
 
         self.checkbox_var_colour_clusters = ctk.BooleanVar()
-        self.checkbox_colour_clusters = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Colour clusters",
+        self.checkbox_colour_clusters = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Color clusters",
                                                          command=self.on_colour_clusters_switch,
                                                          variable=self.checkbox_var_colour_clusters, onvalue=True,
                                                          offvalue=False)
-        self.checkbox_colour_clusters.grid(row=4, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
+        self.checkbox_colour_clusters.grid(row=5, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
 
         # Tab 2: SingleSeq
 
@@ -285,6 +292,7 @@ class App(ctk.CTk):
         self.button_filter_msa.configure(state="disabled")
         self.checkbox_hide_empty_cols.deselect()
         self.controller.hide_empty_cols = False
+        self.checkbox_var_split_mat_visualization.set(True)
 
         self.dendro_cutoff_spinbox.set_highlighted(0.75)
         self.dendro_cutoff_spinbox.enable(False)
@@ -361,6 +369,11 @@ class App(ctk.CTk):
         # self.controller.on_show_domains()
         self.filter_msa_selector.configure(state="disabled")
         self.button_filter_msa.configure(state="disabled")
+
+    def on_split_mat_visualization(self):
+        split = self.checkbox_var_split_mat_visualization.get()
+        self.controller.toggle_split_mat_visualization(split)
+        self.controller.on_show_msa_mat()
 
     def on_hide_empty_cols_switch(self):
         hide = self.checkbox_var_hide_empty_cols.get()

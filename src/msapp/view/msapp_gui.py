@@ -166,7 +166,7 @@ class App(ctk.CTk):
         # Tab 1: Global
 
         self.filter_msa_selector = ctk.CTkOptionMenu(self.tabview.tab("Global"), width=110, dynamic_resizing=False,
-                                                     values=["Standard", "Aggressive"])
+                                                     values=["Mild", "Standard", "Aggressive"])
         self.filter_msa_selector.grid(row=0, column=0, padx=(10, 5), pady=(15, 0), sticky="nw")
 
         self.button_filter_msa = ctk.CTkButton(self.tabview.tab("Global"), width=120, text="Filter MSA",
@@ -289,6 +289,7 @@ class App(ctk.CTk):
         self.appearance_mode_optionemenu.set("System")
         self.sidebar_button_save.configure(state="disabled")
 
+        self.filter_msa_selector.set("Standard")
         self.button_filter_msa.configure(state="disabled")
         self.checkbox_hide_empty_cols.deselect()
         self.controller.hide_empty_cols = False
@@ -340,9 +341,21 @@ class App(ctk.CTk):
         if len(filename) == 0: return
         success: bool = self.controller.initialize_from_file(filename)
         if not success: return
+        # reset selections
         self.dendro_cutoff_spinbox.set_highlighted(0.75)
         self.controller.set_dendro_hcutoff(0.75)
+        self.checkbox_var_highlight_selected_seq.set(False)
         self.controller.reset_selected_seq()
+
+        # reset toggle viz checkboxes
+        self.checkbox_var_split_mat_visualization.set(True)
+        self.controller.toggle_split_mat_visualization(True)
+        self.checkbox_var_hide_empty_cols.set(False)
+        self.controller.toggle_hide_empty_cols(False)
+        self.checkbox_var_reorder_mat_rows.set(False)
+        self.controller.toggle_reorder_mat_rows(False)
+        self.checkbox_var_colour_clusters.set(False)
+        self.controller.toggle_colour_clusters(False)
 
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
@@ -362,7 +375,7 @@ class App(ctk.CTk):
 
     def on_filter_msa(self):
         msa_filter_type = self.filter_msa_selector.get()
-        self.controller.run_filtering_pipeline(msa_filter_type == "Aggressive")
+        self.controller.run_filtering_pipeline(msa_filter_type)
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
         # self.controller.on_show_consensus()

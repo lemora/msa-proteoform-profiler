@@ -1,6 +1,6 @@
 from msapp.model.msa import MultiSeqAlignment
 from msapp.view.msapp_gui import App
-from msapp.model.mat_manipulation import cross_convolve
+from msapp.model.mat_manipulation import cross_convolve, gaussian_blur
 
 from msapp.view.visualization import create_cluster_consensus_visualization, color_clusters, \
     highlight_row, create_resized_mat_visualization, show_as_subimages, \
@@ -62,21 +62,30 @@ class Controller:
             return False
         return True
 
-    def run_filtering_pipeline(self, aggressive: bool = False):
+    def run_filtering_pipeline(self, filter_type: str = ""):
         """Triggers running a matrix filtering pipeline on the MultiSeqAlignment object."""
         if not self.is_mat_initialized(): return
+
         self.gui.add_to_textbox("Running filtering pipeline.")
         self.msa.filter_by_length_statistic()
         self.gui.add_to_textbox("-- OP: Filtering by length statistic > 3 sigma.")
-        self.msa.img_process(cross_convolve, col_size=5)
-        self.gui.add_to_textbox("-- OP: Cross-convolving (1x5)")
-        self.msa.img_process(cross_convolve, col_size=17, row_size=7)
-        self.gui.add_to_textbox("-- OP: Cross-convolving (7x17)")
-        if aggressive:
+        self.msa.remove_isolated_connections()
+        self.gui.add_to_textbox("-- OP: Removing isolated connections (likely errors).")
+
+        if filter_type.lower() == "standard":
+            self.msa.img_process(gaussian_blur, ksize=5)
+            self.gui.add_to_textbox("-- OP: Cross-convolving (1x5)")
+            self.msa.img_process(cross_convolve, col_size=5)
+            self.gui.add_to_textbox("-- OP: Cross-convolving (1x5)")
+            self.msa.img_process(cross_convolve, col_size=17, row_size=7)
+            self.gui.add_to_textbox("-- OP: Cross-convolving (7x17)")
+
+        if filter_type.lower() == "aggressive":
             vsize = self.msa.nrows // 10
             vsize = vsize if vsize % 2 == 1 else vsize + 1
             self.msa.img_process(cross_convolve, col_size=vsize, row_size=3)
             self.gui.add_to_textbox(f"-- OP: Cross-convolving ({3}x{vsize})")
+
         self.msa_changed = True
         self.dendro_changed = True
         self.consensus_changed = True
@@ -143,7 +152,8 @@ class Controller:
     def toggle_reorder_mat_rows(self, should_reorder: bool = False):
         self.reorder_rows = should_reorder
         self.msa_changed = True
-        self.gui.set_slider_value(self.get_selseq_idx())
+        if self.highlight_selected_seq and self.selected_seq != -1:
+            self.gui.set_slider_value(self.get_selseq_idx())
 
     def toggle_colour_clusters(self, should_colour: bool = False):
         self.colour_clusters = should_colour

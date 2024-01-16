@@ -116,6 +116,11 @@ class MultiSeqAlignment:
         if gc.DISPLAY: self.visualize(rf"Removed {len(seqs_over_three_std)} seqs > 3 $\sigma$ length")
         self._post_op()
 
+    def remove_isolated_connections(self):
+        black_pixels_count = np.sum(self._mat == 0, axis=0)
+        columns_to_change = np.where(black_pixels_count <= 1)[0]
+        self._mat[:, columns_to_change] = 1
+
     def remove_empty_cols(self, should_show: bool = False):
         """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
         self._mat = remove_empty_cols(self._mat)

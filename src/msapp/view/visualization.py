@@ -71,13 +71,14 @@ def show_as_subimages(mat, title: str) -> Figure:
     return figure
 
 
-def create_resized_mat_visualization(mat: np.array, target_ratio: float, highlight_row_idx: int = -1) -> np.array:
+def create_resized_mat_visualization(image: np.array, target_ratio: float) -> np.array:
     """Based on a given width to height ratio, this method calculates the optimal number of blocks the matrix needs to
     be split either by row or by column, so that if the blocks are concatenated in the other axis direction,
     they best approximate the given target aspect ratio.
     It also highlights a selected row.
     Another method is called that then does the matrix splitting and concatenation."""
-    original_height, original_width = mat.shape
+    original_height = len(image)
+    original_width = len(image[0])
 
     # Calculate the potential splits for both row and column
     splits_by_row = math.ceil(math.sqrt(original_height * target_ratio / original_width))
@@ -94,30 +95,13 @@ def create_resized_mat_visualization(mat: np.array, target_ratio: float, highlig
         split_by_row = False
 
     # if splitting by row is more optimal, transpose matrix before and after calling the splitting by col function
-    image = highlight_row(mat, highlight_row_idx)
+    # image = highlight_row(image, highlight_row_idx)
     if split_by_row:
         image = cv2.transpose(image)
     reordered_mat = create_colsplit_subimages_mat(image, split_count)
     if split_by_row:
         return cv2.transpose(reordered_mat)
     return reordered_mat
-
-
-def highlight_row(mat: np.array, row_idx: int) -> np.array:
-    height, width = mat.shape
-    # to image
-    image = np.array(mat, dtype=np.uint8) * 255
-    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-
-    # highlight selected row
-    if 0 <= row_idx < height:
-        white_highlight = (255, 0, 0)  # red
-        black_highlight = (0, 89, 178)  # blue
-        the_row = mat[row_idx]
-        colored_row = np.array([black_highlight if i == 0 else white_highlight for i in the_row])
-        image[row_idx] = colored_row
-
-    return image
 
 
 def create_colsplit_subimages_mat(imgmat, splits: int = -1) -> np.array:
@@ -152,6 +136,47 @@ def create_colsplit_subimages_mat(imgmat, splits: int = -1) -> np.array:
 
     return np.vstack(subimages)
 
+
+def highlight_row(imgmat: np.array, row_idx: int) -> np.array:
+    if isinstance(imgmat[0][0], np.uint8):
+        # to image with three channels
+        imgmat = np.array(imgmat, dtype=np.uint8) * 255
+        imgmat = cv2.cvtColor(imgmat, cv2.COLOR_GRAY2BGR)
+    height = len(imgmat)
+
+    # highlight selected row
+    if 0 <= row_idx < height:
+        white_highlight = (255, 0, 0)  # red
+        black_highlight = (0, 89, 178)  # blue
+        the_row = imgmat[row_idx]
+        colored_row = np.array([white_highlight if i.all() == 255 else black_highlight for i in the_row])
+        imgmat[row_idx] = colored_row
+
+    return imgmat
+
+
+def color_clusters(mat: np.array, cluster_labels: np.ndarray) -> np.array:
+    height, width = mat.shape
+
+    # to image with three channels
+    image = np.array(mat, dtype=np.uint8) * 255
+    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+    if height != len(cluster_labels):
+        return image
+
+    nclusters = len(set(cluster_labels))
+    palette = sns.color_palette(None, nclusters+1)
+    palette_255 = np.array([(int(color[0] * 255), int(color[1] * 255), int(color[2] * 255)) for color in palette])
+    white_highlight = (255, 255, 255)
+    # colour clusters
+    for i in range(height):
+        lbl = cluster_labels[i]
+        cluster_col = palette_255[lbl]
+        colored_row = np.where((np.all(image[i] == [0, 0, 0], axis=1)[:, None]), cluster_col, white_highlight)
+        image[i] = colored_row
+
+    return image
 
 # ----------------- clustering
 

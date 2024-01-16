@@ -106,11 +106,11 @@ class App(ctk.CTk):
         self.tabview_dendro.grid(row=2, rowspan=2, column=1, padx=(20, 0), pady=(20, 20), sticky="nsew")
         self.tabview_dendro.grid_columnconfigure(0, weight=1)
         self.tabview_dendro.add("Dendrogram")
-        self.tabview_dendro.add("Dendro-Clusters")
+        self.tabview_dendro.add("Domains")
         self.tabview_dendro.tab("Dendrogram").grid_columnconfigure(0, weight=1)
         self.tabview_dendro.tab("Dendrogram").grid_rowconfigure(0, weight=1)
-        self.tabview_dendro.tab("Dendro-Clusters").grid_columnconfigure(0, weight=1)
-        self.tabview_dendro.tab("Dendro-Clusters").grid_rowconfigure(0, weight=1)
+        self.tabview_dendro.tab("Domains").grid_columnconfigure(0, weight=1)
+        self.tabview_dendro.tab("Domains").grid_rowconfigure(0, weight=1)
 
         # ------ dendrogram view
 
@@ -130,25 +130,25 @@ class App(ctk.CTk):
         self.canvas_dendro.draw()
         self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
 
-        # ------ dendrogram height cluster view
+        # ------ prediceted domains view
 
-        self.dendrogram_clustercount_frame = ctk.CTkFrame(self.tabview_dendro.tab("Dendro-Clusters"),
-                                                          fg_color="transparent")
-        self.dendrogram_clustercount_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
-        self.dendrogram_clustercount_frame.grid_columnconfigure(0, weight=1)
-        self.dendrogram_clustercount_frame.grid_rowconfigure(0, weight=1)
-        self.dendro_height_label = ctk.CTkLabel(self.dendrogram_clustercount_frame, text="Cluster Count Per Height",
-                                                font=ctk.CTkFont(size=15))
-        self.dendro_height_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
+        self.domains_frame = ctk.CTkFrame(self.tabview_dendro.tab("Domains"),
+                                          fg_color="transparent")
+        self.domains_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
+        self.domains_frame.grid_columnconfigure(0, weight=1)
+        self.domains_frame.grid_rowconfigure(0, weight=1)
+        self.domains_label = ctk.CTkLabel(self.domains_frame, text="Predicted protein domains",
+                                          font=ctk.CTkFont(size=15))
+        self.domains_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
 
         fig, ax = plt.subplots()
         fig.set_tight_layout(True)
         fig.set_figheight(4)
         ax.axis("off")
-        self.canvas_dendro_clustercount = FigureCanvasTkAgg(fig, self.dendrogram_clustercount_frame)
-        self.canvas_dendro_clustercount.draw()
-        self.canvas_dendro_clustercount.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10),
-                                                             sticky="nsew")
+        self.canvas_domain_view = FigureCanvasTkAgg(fig, self.domains_frame)
+        self.canvas_domain_view.draw()
+        self.canvas_domain_view.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10),
+                                                     sticky="nsew")
 
         # ------ options/operations frame
 
@@ -197,6 +197,13 @@ class App(ctk.CTk):
                                                          offvalue=False)
         self.checkbox_reorder_mat_rows.grid(row=3, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
 
+        self.checkbox_var_colour_clusters = ctk.BooleanVar()
+        self.checkbox_colour_clusters = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Colour clusters",
+                                                         command=self.on_colour_clusters_switch,
+                                                         variable=self.checkbox_var_colour_clusters, onvalue=True,
+                                                         offvalue=False)
+        self.checkbox_colour_clusters.grid(row=4, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
+
         # Tab 2: SingleSeq
 
         self.button_choose_seq = ctk.CTkButton(self.tabview.tab("SingleSeq"), width=120, text="Select Sequence",
@@ -222,9 +229,6 @@ class App(ctk.CTk):
                                                                onvalue=True, offvalue=False)
         self.checkbox_highlight_selected_seq.grid(row=5, column=0, columnspan=2, pady=(0, 0), padx=(10, 10),
                                                   sticky="nw")
-
-        # self.seq_slider = ctk.CTkSlider(self.tabview.tab("SingleSeq"), from_=0, to=100, command=self.on_slider_event)
-        # self.seq_slider.grid(row=5, column=0, columnspan=2, padx=(5, 0), pady=(5, 0), sticky="ew")
 
         # ------ info frame
 
@@ -334,8 +338,8 @@ class App(ctk.CTk):
 
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
-        self.controller.on_show_consensus()
-        self.controller.on_show_dendro_clustercount()
+        # self.controller.on_show_consensus()
+        # self.controller.on_show_domains()
 
         self.button_filter_msa.configure(state="normal")
         self.filter_msa_selector.configure(state="normal")
@@ -353,8 +357,8 @@ class App(ctk.CTk):
         self.controller.run_filtering_pipeline(msa_filter_type == "Aggressive")
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
-        self.controller.on_show_consensus()
-        self.controller.on_show_dendro_clustercount()
+        # self.controller.on_show_consensus()
+        # self.controller.on_show_domains()
         self.filter_msa_selector.configure(state="disabled")
         self.button_filter_msa.configure(state="disabled")
 
@@ -366,6 +370,11 @@ class App(ctk.CTk):
     def on_reorder_mat_rows_switch(self):
         reorder = self.checkbox_var_reorder_mat_rows.get()
         self.controller.toggle_reorder_mat_rows(reorder)
+        self.controller.on_show_msa_mat()
+
+    def on_colour_clusters_switch(self):
+        colour = self.checkbox_var_colour_clusters.get()
+        self.controller.toggle_colour_clusters(colour)
         self.controller.on_show_msa_mat()
 
     def on_highlight_selected_seq(self):
@@ -381,8 +390,9 @@ class App(ctk.CTk):
         self.add_to_textbox(f"Dendrogram height cutoff set to {val}")
         self.controller.set_dendro_hcutoff(val)
         self.controller.on_show_dendrogram()
-        self.controller.on_show_consensus()
-        self.controller.on_show_dendro_clustercount()
+        self.controller.on_show_msa_mat()
+        # self.controller.on_show_consensus()
+        # self.controller.on_show_domains()
 
     def on_open_search_seq_dialog(self):
         SeqSearchDialogue(self, title="Select a Sequence")
@@ -437,18 +447,18 @@ class App(ctk.CTk):
         self.canvas_consensus.draw()
         self.canvas_consensus.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
-    def show_dendro_clustercount(self, dc_fig: Figure):
+    def show_domains(self, dc_fig: Figure):
         plt.close()
         ax = dc_fig.subplots()
         ax.axis("off")
         dc_fig.set_figheight(4)
         dc_fig.set_tight_layout(True)
 
-        self.canvas_dendro_clustercount.get_tk_widget().destroy()
-        self.canvas_dendro_clustercount = FigureCanvasTkAgg(dc_fig, self.dendrogram_clustercount_frame)
-        self.canvas_dendro_clustercount.draw()
-        self.canvas_dendro_clustercount.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10),
-                                                             sticky="new")
+        self.canvas_domain_view.get_tk_widget().destroy()
+        self.canvas_domain_view = FigureCanvasTkAgg(dc_fig, self.domains_frame)
+        self.canvas_domain_view.draw()
+        self.canvas_domain_view.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10),
+                                                     sticky="new")
 
     def add_to_textbox(self, text_to_add: str):
         self.textbox.configure(state="normal")

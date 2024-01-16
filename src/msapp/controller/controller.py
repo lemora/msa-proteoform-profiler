@@ -2,8 +2,8 @@ from msapp.model.msa import MultiSeqAlignment
 from msapp.view.msapp_gui import App
 from msapp.model.mat_manipulation import cross_convolve
 
-from msapp.view.visualization import create_cluster_consensus_visualization, \
-    create_dendrogram_height_cluster_count_plot, create_resized_mat_visualization, get_empty_plot, show_as_subimages, \
+from msapp.view.visualization import create_cluster_consensus_visualization, color_clusters, \
+    highlight_row, create_resized_mat_visualization, show_as_subimages, \
     visualize_dendrogram
 
 
@@ -16,9 +16,10 @@ class Controller:
 
         self.hide_empty_cols = False
         self.reorder_rows = False
+        self.colour_clusters = False
         self.highlight_selected_seq = False
-        self.dendro_hcutoff = 0.75
         self.selected_seq = -1
+        self.dendro_hcutoff = 0.75
 
         # dirty flags for visualizations that need to be refreshed
         self.msa_changed = True
@@ -87,6 +88,8 @@ class Controller:
         self.dendro_changed = True
         self.consensus_changed = True
         self.dclustercount_changed = True
+        if self.colour_clusters:
+            self.msa_changed = True
 
     # --- sequence selection
 
@@ -137,6 +140,10 @@ class Controller:
         self.msa_changed = True
         self.gui.set_slider_value(self.get_selseq_idx())
 
+    def toggle_colour_clusters(self, should_colour: bool = False):
+        self.colour_clusters = should_colour
+        self.msa_changed = True
+
     def toggle_highlight_selected_seq(self, should_highlight: bool = False):
         self.highlight_selected_seq = should_highlight
         if self.selected_seq != -1:
@@ -153,8 +160,14 @@ class Controller:
         mat = self.msa.get_mat(self.hide_empty_cols, self.reorder_rows)
         if mat is not None:
             wh_ratio = self.gui.get_mat_frame_wh_ratio()
-            resized = create_resized_mat_visualization(mat, wh_ratio, self.get_selseq_idx())
-            fig = show_as_subimages(resized, "")
+            img = mat
+            if self.colour_clusters:
+                # TODO: consider mat vs. dendro ordering!
+                cluster_labels = self.msa.get_cluster_labels(self.dendro_hcutoff, self.reorder_rows)
+                img = color_clusters(mat, cluster_labels)
+            img_highlighted = highlight_row(img, self.get_selseq_idx())
+            img_resized = create_resized_mat_visualization(img_highlighted, wh_ratio)
+            fig = show_as_subimages(img_resized, "")
             self.gui.show_matrix(fig)
             self.msa_changed = False
 
@@ -166,6 +179,10 @@ class Controller:
         fig = visualize_dendrogram(self.msa.get_linkage_mat(), self.dendro_hcutoff)
         self.gui.show_dendrogram(fig)
         self.dendro_changed = False
+
+        cluster_labels = self.msa.get_cluster_labels(self.dendro_hcutoff)
+        nclusters = len(set(cluster_labels))
+        self.gui.set_cluster_count(nclusters)
 
     def on_show_consensus(self, force: bool = False):
         """Controller is ordered to fetch a consensus sequence visualization figure and forward it to the GUI."""
@@ -179,15 +196,14 @@ class Controller:
         self.gui.show_consensus(fig)
         self.consensus_changed = False
 
-    def on_show_dendro_clustercount(self, force: bool = False):
+    def on_show_domains(self, force: bool = False):
         """Controller is ordered to fetch a cluster per dendrogram height plot figure and forward it to the GUI."""
         if not self.is_mat_initialized(): return
         if not force and not self.dclustercount_changed: return
 
-        fig = create_dendrogram_height_cluster_count_plot(self.msa.get_linkage_mat(), self.dendro_hcutoff)
-        self.gui.show_dendro_clustercount(fig)
-        self.consensus_changed = False
-
+        # fig = create_dendrogram_height_cluster_count_plot(self.msa.get_linkage_mat(), self.dendro_hcutoff)
+        # self.gui.show_domains(fig)
+        # self.consensus_changed = False
 
     # --- query state
 

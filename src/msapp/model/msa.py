@@ -150,6 +150,16 @@ class MultiSeqAlignment:
         """Returns a linkage matrix created by means of the given distance metric."""
         return self.linkage_mat.get(self._mat, cmethod)
 
+    def get_cluster_labels(self, perc_threshold: float = 0.75, dendro_ordered = False):
+        linkage_mat = self.get_linkage_mat()
+        max_val = max(linkage_mat[:, 2])
+        dist_threshold = perc_threshold * max_val
+        cluster_labels = fcluster(linkage_mat, t=dist_threshold, criterion='distance')
+        if dendro_ordered:
+            indices_dendro = self.get_seq_indexer().get_indices_dendro()
+            cluster_labels = [cluster_labels[i] for i in indices_dendro]
+        return cluster_labels
+
     def calc_consensus_clusters(self, perc_threshold: float = 0.75):
         """Calculate clusters based on relative similarity in dendrogram and a consensus sequence (average) per cluster.
         arg perc_threshold: relative dendrogram height to cut at (0 to 1), where 1 is the root (one cluster),

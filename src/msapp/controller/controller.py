@@ -2,9 +2,8 @@ from msapp.model.msa import MultiSeqAlignment
 from msapp.view.msapp_gui import App
 from msapp.model.mat_manipulation import cross_convolve, gaussian_blur
 
-from msapp.view.visualization import create_cluster_consensus_visualization, color_clusters, \
-    highlight_row, create_resized_mat_visualization, show_as_subimages, \
-    visualize_dendrogram
+from msapp.view.visualization import (color_clusters, create_resized_mat_visualization, highlight_row,
+                                      show_as_subimages, visualize_dendrogram, visualize_domains)
 
 
 class Controller:
@@ -25,8 +24,7 @@ class Controller:
         # dirty flags for visualizations that need to be refreshed
         self.msa_changed = True
         self.dendro_changed = True
-        self.consensus_changed = True
-        self.dclustercount_changed = True
+        self.domains_changed = True
 
     def start(self):
         """Starts the main loop of the GUI."""
@@ -55,8 +53,7 @@ class Controller:
             # flag all plots as dirty
             self.msa_changed = True
             self.dendro_changed = True
-            self.consensus_changed = True
-            self.dclustercount_changed = True
+            self.domains_changed = True
         else:
             self.gui.add_to_textbox(f"Could not load MSA from file '{fname_truncated}'.\n")
             return False
@@ -88,16 +85,14 @@ class Controller:
 
         self.msa_changed = True
         self.dendro_changed = True
-        self.consensus_changed = True
-        self.dclustercount_changed = True
+        self.domains_changed = True
 
     def set_dendro_hcutoff(self, dendro_hcutoff: float):
         if self.dendro_hcutoff == dendro_hcutoff:
             return
         self.dendro_hcutoff = dendro_hcutoff
         self.dendro_changed = True
-        self.consensus_changed = True
-        self.dclustercount_changed = True
+        self.domains_changed = True
         if self.colour_clusters:
             self.msa_changed = True
 
@@ -117,6 +112,7 @@ class Controller:
                 self.msa_changed = True
 
     def reset_selected_seq(self):
+        self.highlight_selected_seq = False
         self.selected_seq = -1
         self.gui.set_slider_value(0)
 
@@ -200,26 +196,16 @@ class Controller:
         nclusters = len(set(cluster_labels))
         self.gui.set_cluster_count(nclusters)
 
-    def on_show_consensus(self, force: bool = False):
-        """Controller is ordered to fetch a consensus sequence visualization figure and forward it to the GUI."""
+
+    def on_show_domains(self):
         if not self.is_mat_initialized(): return
-        if not force and not self.consensus_changed: return
+        if not self.domains_changed: return
 
-        consensus_clusters, cluster_sizes = self.msa.calc_consensus_clusters(perc_threshold=self.dendro_hcutoff)
-        nclusters = len(consensus_clusters)
-        self.gui.set_cluster_count(nclusters)
-        fig = create_cluster_consensus_visualization(consensus_clusters, cluster_sizes)
-        self.gui.show_consensus(fig)
-        self.consensus_changed = False
-
-    def on_show_domains(self, force: bool = False):
-        """Controller is ordered to fetch a cluster per dendrogram height plot figure and forward it to the GUI."""
-        if not self.is_mat_initialized(): return
-        if not force and not self.dclustercount_changed: return
-
-        # fig = create_dendrogram_height_cluster_count_plot(self.msa.get_linkage_mat(), self.dendro_hcutoff)
-        # self.gui.show_domains(fig)
-        # self.consensus_changed = False
+        self.gui.add_to_textbox("Calculating domains.")
+        domains = self.msa.retrieve_domains(self.dendro_hcutoff)
+        fig = visualize_domains(domains)
+        self.gui.show_domains(fig)
+        self.domains_changed = False
 
     # --- query state
 

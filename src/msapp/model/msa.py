@@ -165,39 +165,56 @@ class MultiSeqAlignment:
             cluster_labels = [cluster_labels[i] for i in indices_dendro]
         return cluster_labels
 
-    def calc_consensus_clusters(self, perc_threshold: float = 0.75):
-        """Calculate clusters based on relative similarity in dendrogram and a consensus sequence (average) per cluster.
-        arg perc_threshold: relative dendrogram height to cut at (0 to 1), where 1 is the root (one cluster),
-        0 the leaves (one cluster for every distinct row)"""
-        if perc_threshold < 0 or perc_threshold > 1: raise ValueError(
-            "The dendrogram cut height must be between 0 and 1.")
-
-        linkage_mat = self.get_linkage_mat()
-        if gc.DISPLAY: visualize_clusters(self._mat, linkage_mat)
-
-        mat = self._mat
-        max_val = max(linkage_mat[:, 2])
-        dist_threshold = perc_threshold * max_val
-        if gc.VERBOSE: print(
-            f"Normalized dist threshold ({perc_threshold:1.2f} * {max_val:1.2f}): {dist_threshold:1.2f}")
-
-        cluster_labels = fcluster(linkage_mat, t=dist_threshold, criterion='distance')
+    def retrieve_domains(self, perc_threshold: float = 0.75) -> np.array:
+        """Calculates and returns domains that are recognizable in the MSA.
+        Returns a list of lists, where each list corresponds to a cluster and
+        each list contains tuples, one per domain: (start, end) between 0.0 and 10.0."""
+        print("calculating domains...")
+        cluster_labels = self.get_cluster_labels(perc_threshold)
         nclusters = len(set(cluster_labels))
-        if gc.VERBOSE: print(f"Clustering, n discovered: {nclusters}")
 
         consensus_list = np.array([])
         cluster_sizes = []
-        for i in range(1, nclusters + 1):
+        for i in range(nclusters, 0, -1):
             cluster_indices = np.where(cluster_labels == i)[0]
             cluster_sizes.append(len(cluster_indices))
-            cluster_data = mat[cluster_indices]
+            cluster_data = self._mat[cluster_indices]
             cseq = mode(cluster_data, axis=0).mode
             consensus_list = np.vstack((consensus_list, cseq)) if consensus_list.size else cseq
 
         if gc.DISPLAY: create_cluster_consensus_visualization(consensus_list)
         if nclusters == 1:
             consensus_list = [consensus_list]
-        return consensus_list, cluster_sizes
+        domains = self.calculate_black_regions(consensus_list)
+        # print(f"calculated domains: {domains}")
+        return domains
+
+    def calculate_black_regions(self, consensus_list):
+        black_regions_list = []
+        matrix_width = self.ncols
+
+        for consensus_seq in consensus_list:
+            black_regions = []
+            current_start = None
+
+            for i, value in enumerate(consensus_seq):
+                if value == 0:
+                    if current_start is None:
+                        current_start = i
+                elif current_start is not None:
+                    current_end = i - 1
+                    normalized_start = (current_start / matrix_width) * 10
+                    normalized_end = (current_end / matrix_width) * 10
+                    black_regions.append((normalized_start, normalized_end))
+                    current_start = None
+            if current_start is not None:
+                current_end = len(consensus_seq) - 1
+                normalized_start = (current_start / matrix_width) * 10
+                normalized_end = (current_end / matrix_width) * 10
+                black_regions.append((normalized_start, normalized_end))
+            black_regions_list.append(black_regions)
+
+        return black_regions_list
 
     # -------- analysis/metrics
 
@@ -373,6 +390,8 @@ class SequenceIndexer:
 
     def get_ith_seqid_dendro(self, i: int) -> str:
         """Returns the ith sequence ID in from the by-dendrogram matrix sorting indices"""
+        if i >= self.num_entries:
+            return None
         seq_id = [seq_id for seq_id, value in self.seqid_dict.items() if value[2] == i][0]
         return seq_id
 

@@ -302,6 +302,34 @@ def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.
     return fig
 
 
+# ----------------- domain visualization
+
+def visualize_domains(domains_lists: np.array) -> Figure:
+    """Gets a list of lists of tuples with start and end values between 0 and 10 (domains)."""
+    num_lines = len(domains_lists)
+    image_width = 10
+    image_height = num_lines
+    fig, ax = plt.subplots(figsize=(image_width, image_height))
+    ax.set_xlim(0, image_width)
+    ax.set_ylim(0, image_height)
+
+    # Draw horizontal lines with filled vertical rectangles
+    line_height = 0.8
+    line_color = "#000000"
+    for i, cluster in enumerate(domains_lists):
+        line_y = i + 0.5
+        ax.hlines(line_y, 0, image_width, color=line_color, linewidth=2)
+        for domain in cluster:
+            ax.fill_betweenx(y=[line_y - line_height / 2, line_y + line_height / 2],
+                             x1=domain[0], x2=domain[1], color=line_color)
+
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    return fig
+
+
 # ----------------- statistics
 
 def show_hist(counts: list, nbins: int = 50) -> None:

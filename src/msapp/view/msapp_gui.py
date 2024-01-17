@@ -60,11 +60,9 @@ class App(ctk.CTk):
         self.tabview_mat.grid(row=0, rowspan=2, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
         self.tabview_mat.grid_columnconfigure(0, weight=1)
         self.tabview_mat.add("MSA")
-        self.tabview_mat.add("Consensus")
+        # self.tabview_mat.add("Consensus")
         self.tabview_mat.tab("MSA").grid_columnconfigure(0, weight=1)
         self.tabview_mat.tab("MSA").grid_rowconfigure(0, weight=1)
-        self.tabview_mat.tab("Consensus").grid_columnconfigure(0, weight=1)
-        self.tabview_mat.tab("Consensus").grid_rowconfigure(0, weight=1)
 
         # ------ mat view
 
@@ -82,23 +80,6 @@ class App(ctk.CTk):
         self.canvas_mat = FigureCanvasTkAgg(fig, self.mat_display_frame)
         self.canvas_mat.draw()
         self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
-
-        # ------ consensus view
-
-        self.consensus_frame = ctk.CTkFrame(self.tabview_mat.tab("Consensus"), fg_color="transparent")
-        self.consensus_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
-        self.consensus_frame.grid_columnconfigure(0, weight=1)
-        self.consensus_frame.grid_rowconfigure(0, weight=1)
-        self.mat_label = ctk.CTkLabel(self.consensus_frame, text="MSA Consensus", font=ctk.CTkFont(size=15))
-        self.mat_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
-
-        fig, ax = plt.subplots()
-        fig.set_tight_layout(True)
-        fig.set_figheight(4)
-        ax.axis("off")
-        self.canvas_consensus = FigureCanvasTkAgg(fig, self.consensus_frame)
-        self.canvas_consensus.draw()
-        self.canvas_consensus.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
 
         # ------ DENDROGRAM DISPLAY FRAME (lower middle)
 
@@ -130,14 +111,14 @@ class App(ctk.CTk):
         self.canvas_dendro.draw()
         self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
 
-        # ------ prediceted domains view
+        # ------ predicted domains view
 
         self.domains_frame = ctk.CTkFrame(self.tabview_dendro.tab("Domains"),
                                           fg_color="transparent")
         self.domains_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
         self.domains_frame.grid_columnconfigure(0, weight=1)
         self.domains_frame.grid_rowconfigure(0, weight=1)
-        self.domains_label = ctk.CTkLabel(self.domains_frame, text="Predicted protein domains",
+        self.domains_label = ctk.CTkLabel(self.domains_frame, text="To get domain info, filter first...",
                                           font=ctk.CTkFont(size=15))
         self.domains_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
 
@@ -168,7 +149,6 @@ class App(ctk.CTk):
         self.filter_msa_selector = ctk.CTkOptionMenu(self.tabview.tab("Global"), width=110, dynamic_resizing=False,
                                                      values=["Mild", "Standard", "Aggressive"])
         self.filter_msa_selector.grid(row=0, column=0, padx=(10, 5), pady=(15, 0), sticky="nw")
-
         self.button_filter_msa = ctk.CTkButton(self.tabview.tab("Global"), width=120, text="Filter MSA",
                                                command=self.on_filter_msa)
         self.button_filter_msa.grid(row=0, column=1, padx=(0, 10), pady=(15, 0))
@@ -177,10 +157,17 @@ class App(ctk.CTk):
         self.dendro_cutoff_spinbox = FloatSpinbox(self.tabview.tab("Global"), width=110, step_size=0.05, minval=0.25,
                                                   maxval=1.0)
         self.dendro_cutoff_spinbox.grid(row=1, column=0, padx=(10, 5), pady=(10, 0), sticky="nw")
-
         self.button_dendro_hcutoff = ctk.CTkButton(self.tabview.tab("Global"), width=120, text="Use dendro cutoff",
                                                    command=self.on_dendro_height_change)
         self.button_dendro_hcutoff.grid(row=1, column=1, padx=(0, 10), pady=(10, 0))
+
+        # domains calculation
+        self.filter_calc_domains_mode = ctk.CTkOptionMenu(self.tabview.tab("Global"), width=110, dynamic_resizing=False,
+                                                     values=["Quick", "Thorough"])
+        self.filter_calc_domains_mode.grid(row=2, column=0, padx=(10, 5), pady=(15, 0), sticky="nw")
+        self.button_calc_domains = ctk.CTkButton(self.tabview.tab("Global"), width=120, text="Calc domains",
+                                               command=self.on_calculate_domains)
+        self.button_calc_domains.grid(row=2, column=1, padx=(0, 10), pady=(10, 0))
 
         # visualization checkboxes
         self.checkbox_var_split_mat_visualization = ctk.BooleanVar()
@@ -188,28 +175,28 @@ class App(ctk.CTk):
                                                         command=self.on_split_mat_visualization,
                                                         variable=self.checkbox_var_split_mat_visualization, onvalue=True,
                                                         offvalue=False)
-        self.checkbox_split_mat_visualization.grid(row=2, column=0, columnspan=2, pady=(20, 0), padx=(10, 10), sticky="nw")
+        self.checkbox_split_mat_visualization.grid(row=3, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
 
         self.checkbox_var_hide_empty_cols = ctk.BooleanVar()
         self.checkbox_hide_empty_cols = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Hide empty columns",
                                                         command=self.on_hide_empty_cols_switch,
                                                         variable=self.checkbox_var_hide_empty_cols, onvalue=True,
                                                         offvalue=False)
-        self.checkbox_hide_empty_cols.grid(row=3, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
+        self.checkbox_hide_empty_cols.grid(row=4, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
 
         self.checkbox_var_reorder_mat_rows = ctk.BooleanVar()
-        self.checkbox_reorder_mat_rows = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Sort sequences",
+        self.checkbox_reorder_mat_rows = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Sort by clusters",
                                                          command=self.on_reorder_mat_rows_switch,
                                                          variable=self.checkbox_var_reorder_mat_rows, onvalue=True,
                                                          offvalue=False)
-        self.checkbox_reorder_mat_rows.grid(row=4, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
+        self.checkbox_reorder_mat_rows.grid(row=5, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
 
         self.checkbox_var_colour_clusters = ctk.BooleanVar()
         self.checkbox_colour_clusters = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Color clusters",
                                                          command=self.on_colour_clusters_switch,
                                                          variable=self.checkbox_var_colour_clusters, onvalue=True,
                                                          offvalue=False)
-        self.checkbox_colour_clusters.grid(row=5, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
+        self.checkbox_colour_clusters.grid(row=6, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
 
         # Tab 2: SingleSeq
 
@@ -273,8 +260,6 @@ class App(ctk.CTk):
         self.cluster_count_value = ctk.CTkLabel(self.scrollable_frame, text="", font=ctk.CTkFont(size=14))
         self.cluster_count_value.grid(row=4, column=1, padx=(0, 10), pady=(5, 0), sticky="nw")
 
-        # TODO: add suggested clickable clusterings
-
         # ------ textbox
 
         self.logging_frame = ctk.CTkFrame(self)
@@ -294,10 +279,11 @@ class App(ctk.CTk):
         self.checkbox_hide_empty_cols.deselect()
         self.controller.hide_empty_cols = False
         self.checkbox_var_split_mat_visualization.set(True)
-
         self.dendro_cutoff_spinbox.set_highlighted(0.75)
         self.dendro_cutoff_spinbox.enable(False)
         self.button_dendro_hcutoff.configure(state="disabled")
+        self.filter_calc_domains_mode.set("Quick")
+        self.button_calc_domains.configure(state="disabled")
 
         self.button_choose_seq.configure(state="disabled")
         self.selected_seq_textfield.configure(state="disabled")
@@ -359,11 +345,10 @@ class App(ctk.CTk):
 
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
-        # self.controller.on_show_consensus()
-        # self.controller.on_show_domains()
 
         self.button_filter_msa.configure(state="normal")
         self.filter_msa_selector.configure(state="normal")
+        self.filter_msa_selector.set("Standard")
         self.button_dendro_hcutoff.configure(state="normal")
         self.dendro_cutoff_spinbox.enable(True)
         self.seq_count_value.configure(text=self.controller.msa.nrows)
@@ -378,10 +363,17 @@ class App(ctk.CTk):
         self.controller.run_filtering_pipeline(msa_filter_type)
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
-        # self.controller.on_show_consensus()
         # self.controller.on_show_domains()
         self.filter_msa_selector.configure(state="disabled")
         self.button_filter_msa.configure(state="disabled")
+        self.button_calc_domains.configure(state="normal")
+        self.domains_label.configure(text="Predicted protein domains")
+
+    def on_calculate_domains(self):
+        domain_calc_mode = self.filter_calc_domains_mode.get()
+        self.controller.on_show_domains()
+
+    # --- visualization toggles
 
     def on_split_mat_visualization(self):
         split = self.checkbox_var_split_mat_visualization.get()
@@ -417,8 +409,6 @@ class App(ctk.CTk):
         self.controller.set_dendro_hcutoff(val)
         self.controller.on_show_dendrogram()
         self.controller.on_show_msa_mat()
-        # self.controller.on_show_consensus()
-        # self.controller.on_show_domains()
 
     def on_open_search_seq_dialog(self):
         SeqSearchDialogue(self, title="Select a Sequence")
@@ -529,21 +519,21 @@ class SeqSearchDialogue(ctk.CTkToplevel):
         self.geometry(f"{700}x{400}")
         self.minsize(width=400, height=400)
         self.grid_columnconfigure((0, 1), weight=1)
-        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
 
         self._entry_field = ctk.CTkEntry(master=self, width=230)
-        self._entry_field.grid(row=0, column=0, columnspan=2, padx=10, pady=(0, 0), sticky="ew")
+        self._entry_field.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew")
 
         self._list_box = Listbox(master=self)
-        self._list_box.grid(row=1, rowspan=2, column=0, columnspan=2, padx=20, pady=20, sticky="ew")
+        self._list_box.grid(row=1, column=0, columnspan=2, padx=20, pady=20, sticky="nsew")
 
         self._ok_button = ctk.CTkButton(master=self, width=100, border_width=0, text='Select',
                                         command=self.on_ok_event)
-        self._ok_button.grid(row=3, column=0, columnspan=1, padx=(20, 10), pady=(0, 20), sticky="ew")
+        self._ok_button.grid(row=2, column=0, columnspan=1, padx=(20, 10), pady=(0, 10), sticky="nsew")
 
         self._cancel_button = ctk.CTkButton(master=self, width=100, border_width=0, text='Cancel',
                                             command=self.on_cancel_event)
-        self._cancel_button.grid(row=3, column=1, columnspan=1, padx=(10, 20), pady=(0, 20), sticky="ew")
+        self._cancel_button.grid(row=2, column=1, columnspan=1, padx=(10, 20), pady=(0, 10), sticky="nsew")
 
         self._entry_field.bind("<KeyRelease>", self.on_key_release_event)
         self._list_box.bind("<Double-Button-1>", self.on_click_select_event)

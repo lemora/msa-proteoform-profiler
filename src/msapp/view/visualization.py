@@ -11,6 +11,18 @@ import msapp.gconst as gc
 
 # ----------------- general plotting
 
+
+def get_empty_plot():
+    """Returns an empty plot. Mainly for resetting GUI canvases."""
+    # global empty_plot
+    # if empty_plot is None:
+    fig, ax = plt.subplots()
+    ax.axis("off")
+    plt.xticks([]), plt.yticks([])
+    empty_plot = fig
+    return empty_plot
+
+
 def show_pre_post(pre, post, title: str) -> Figure:
     """Shows two matrix images next to each other if they are not too wide. Intended for before/after some change was
     applied to the same matrix."""
@@ -170,19 +182,20 @@ def color_clusters(mat: np.array, cluster_labels: np.ndarray) -> np.array:
         return image
 
     nclusters = len(set(cluster_labels))
-    palette = sns.color_palette(None, nclusters+1)
+    palette = sns.color_palette(None, nclusters + 1)[1:]
     palette_255 = np.array([(int(color[0] * 255), int(color[1] * 255), int(color[2] * 255)) for color in palette])
     white_highlight = (255, 255, 255)
     # colour clusters
     for i in range(height):
-        lbl = cluster_labels[i]
+        lbl = cluster_labels[i] - 1
         cluster_col = palette_255[lbl]
         colored_row = np.where((np.all(image[i] == [0, 0, 0], axis=1)[:, None]), cluster_col, white_highlight)
         image[i] = colored_row
 
     return image
 
-# ----------------- clustering
+
+# ----------------- clusterings
 
 def create_cluster_consensus_visualization(seqs: list[list], cluster_sizes: list = None):
     """Shows the consensus of a number of sequence clusters based on similarity."""
@@ -250,12 +263,15 @@ def visualize_dendrogram(linkage_mat, dheight: float = 0.75) -> Figure:
     if dheight < 0.0 or dheight > 1.0:
         raise ValueError("The dendrogram height at which to color differently needs to be between 0 and 1.")
     fig, ax = plt.subplots()
-    dheight = dheight * max(linkage_mat[:, 2])
-    dendrogram(linkage_mat, ax=ax, color_threshold=dheight)
+    maxval = max(linkage_mat[:, 2])
+    dheight = dheight * maxval
+    for i in np.arange(0.25, 1.25, 0.25):
+        plt.axhline(y=i*maxval, color='#f4f4f4')
+    dendrogram(linkage_mat, ax=ax, color_threshold=dheight, above_threshold_color='#ccc9ca')
     plt.axhline(y=dheight, linestyle='--', color='gray', label='Desired Clusters')
 
-    y = [0]
-    ylabels = ['0.0']
+    y = [0, 0.5*maxval, 1*maxval]
+    ylabels = ['0.0', '0.5', '1.0']
     ax.set_yticks(y, labels=ylabels)
     plt.xticks([])
     plt.xlabel("Aligned sequences reordered by similarity")
@@ -264,7 +280,7 @@ def visualize_dendrogram(linkage_mat, dheight: float = 0.75) -> Figure:
     return fig
 
 
-def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.75):
+def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.75) -> Figure:
     """Creates a line plot based on a given linkage matrix and corresponding dendrogram, which shows the number of
     clusters per normalized height ([0: leaves, 1: root])."""
     max_distance = linkage_mat[:, 2].max()
@@ -284,20 +300,6 @@ def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.
     # plt.yscale('log')
     if gc.DISPLAY: plt.show()
     return fig
-
-
-empty_plot = None
-
-
-def get_empty_plot():
-    """Returns an empty plot. Mainly for resetting GUI canvases."""
-    # global empty_plot
-    # if empty_plot is None:
-    fig, ax = plt.subplots()
-    ax.axis("off")
-    plt.xticks([]), plt.yticks([])
-    empty_plot = fig
-    return empty_plot
 
 
 # ----------------- statistics

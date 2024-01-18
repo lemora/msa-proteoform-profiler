@@ -169,7 +169,6 @@ class MultiSeqAlignment:
         """Calculates and returns domains that are recognizable in the MSA.
         Returns a list of lists, where each list corresponds to a cluster and
         each list contains tuples, one per domain: (start, end) between 0.0 and 10.0."""
-        print("calculating domains...")
         cluster_labels = self.get_cluster_labels(perc_threshold)
         nclusters = len(set(cluster_labels))
 

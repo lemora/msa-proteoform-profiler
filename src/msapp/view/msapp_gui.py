@@ -345,6 +345,7 @@ class App(ctk.CTk):
 
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
+        self.controller.clear_domains_view()
 
         self.button_filter_msa.configure(state="normal")
         self.filter_msa_selector.configure(state="normal")

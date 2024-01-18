@@ -2,7 +2,7 @@ from msapp.model.msa import MultiSeqAlignment
 from msapp.view.msapp_gui import App
 from msapp.model.mat_manipulation import cross_convolve, gaussian_blur
 
-from msapp.view.visualization import (color_clusters, create_resized_mat_visualization, highlight_row,
+from msapp.view.visualization import (color_clusters, create_resized_mat_visualization, get_empty_plot, highlight_row,
                                       show_as_subimages, visualize_dendrogram, visualize_domains)
 
 
@@ -196,6 +196,9 @@ class Controller:
         nclusters = len(set(cluster_labels))
         self.gui.set_cluster_count(nclusters)
 
+    def clear_domains_view(self):
+        empty_plot = get_empty_plot()
+        self.gui.show_domains(empty_plot)
 
     def on_show_domains(self):
         if not self.is_mat_initialized(): return

@@ -1,18 +1,19 @@
 # MSA Proteoform Profiler
 
-The `MSAPP` is a tool for high-level analysis of RNA-Seq Multiple Sequence Alignments.
+The `MSAPP` is a tool for high-level analysis of RNA-Seq multiple sequence alignments.
 It assists in detecting and annotating proteoforms and domains.
+
+It can either be run as with graphical user interface (recommended), or as a command-line application.
 
 
 ### Dependencies
 
-This software requires python >=3.9 and [poetry](https://github.com/python-poetry/poetry).
+This software requires python >= 3.9 and [poetry](https://github.com/python-poetry/poetry).
 All package versions are managed by poetry.
 
 ### Running
 
-Install poetry and python.
-Create a virtual environment with an appropriate python version (once):
+Install poetry. Create a virtual environment with an appropriate python version (once):
 
 ```
 poetry env use python3.12
@@ -38,7 +39,7 @@ Or, when not in venv: `poetry run msapp-gui`.
 
 #### The Command-Line Interface
 
-The CLI is currently a work in progress.
+The CLI offers similar tuning/visualization parameters as the GUI, but it is less interactive.
 
 Running the CLI:
 ```

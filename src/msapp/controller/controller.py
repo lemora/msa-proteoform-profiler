@@ -60,7 +60,7 @@ class Controller:
     def run_filtering_pipeline(self, filter_type: str = "standard"):
         """Triggers running a matrix filtering pipeline on the MultiSeqAlignment object."""
         if not self.is_mat_initialized(): return
-        filter_type = "standard" if filter_type not in ["mild", "standard", "aggressive"] else filter_type
+        filter_type = filter_type.lower()
         self.msa.run_filtering_pipeline(filter_type=filter_type)
         self.gui.add_to_textbox(f"-- OP: Running {filter_type} filtering pipeline.")
 

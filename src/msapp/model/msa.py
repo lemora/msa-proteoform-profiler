@@ -130,6 +130,7 @@ class MultiSeqAlignment:
         self.linkage_mat.mat_changed()
 
     def run_filtering_pipeline(self, filter_type: str = "standard"):
+        filter_type = filter_type.lower()
         filter_type = "standard" if filter_type not in ["mild", "standard", "aggressive"] else filter_type
         if gc.VERBOSE: print(f"Running {filter_type} filtering pipeline.")
 

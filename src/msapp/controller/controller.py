@@ -1,7 +1,5 @@
 from msapp.model.msa import MultiSeqAlignment
 from msapp.view.msapp_gui import App
-from msapp.model.mat_manipulation import cross_convolve, gaussian_blur
-
 from msapp.view.visualization import (color_clusters, create_resized_mat_visualization, get_empty_plot, highlight_row,
                                       show_as_subimages, visualize_dendrogram, visualize_domains)
 
@@ -59,29 +57,12 @@ class Controller:
             return False
         return True
 
-    def run_filtering_pipeline(self, filter_type: str = ""):
+    def run_filtering_pipeline(self, filter_type: str = "standard"):
         """Triggers running a matrix filtering pipeline on the MultiSeqAlignment object."""
         if not self.is_mat_initialized(): return
-
-        self.gui.add_to_textbox("Running filtering pipeline.")
-        self.msa.filter_by_length_statistic()
-        self.gui.add_to_textbox("-- OP: Filtering by length statistic > 3 sigma.")
-        self.msa.remove_isolated_connections()
-        self.gui.add_to_textbox("-- OP: Removing isolated connections (likely errors).")
-
-        if filter_type.lower() == "standard":
-            self.msa.img_process(gaussian_blur, ksize=5)
-            self.gui.add_to_textbox("-- OP: Cross-convolving (1x5)")
-            self.msa.img_process(cross_convolve, col_size=5)
-            self.gui.add_to_textbox("-- OP: Cross-convolving (1x5)")
-            self.msa.img_process(cross_convolve, col_size=17, row_size=7)
-            self.gui.add_to_textbox("-- OP: Cross-convolving (7x17)")
-
-        if filter_type.lower() == "aggressive":
-            vsize = self.msa.nrows // 10
-            vsize = vsize if vsize % 2 == 1 else vsize + 1
-            self.msa.img_process(cross_convolve, col_size=vsize, row_size=3)
-            self.gui.add_to_textbox(f"-- OP: Cross-convolving ({3}x{vsize})")
+        filter_type = "standard" if filter_type not in ["mild", "standard", "aggressive"] else filter_type
+        self.msa.run_filtering_pipeline(filter_type=filter_type)
+        self.gui.add_to_textbox(f"-- OP: Running {filter_type} filtering pipeline.")
 
         self.msa_changed = True
         self.dendro_changed = True
@@ -134,7 +115,6 @@ class Controller:
                 idx = seq_indexer.get_matidx_from_seqid(self.selected_seq)
         return idx
 
-
     # --- toggle mat display options
 
     def toggle_split_mat_visualization(self, should_split: bool = False):
@@ -163,23 +143,28 @@ class Controller:
 
     # --- display graphs
 
+    def get_msa_figure(self, split_mat = True):
+        mat = self.msa.get_mat(self.hide_empty_cols, self.reorder_rows)
+        if mat is None:
+            return None
+        img = mat
+        if self.colour_clusters:
+            cluster_labels = self.msa.get_cluster_labels(self.dendro_hcutoff, self.reorder_rows)
+            img = color_clusters(mat, cluster_labels)
+        img = highlight_row(img, self.get_selseq_idx())
+        if split_mat and self.split_mat_visualization:
+            wh_ratio = self.gui.get_mat_frame_wh_ratio()
+            img = create_resized_mat_visualization(img, wh_ratio, not self.colour_clusters)
+        fig = show_as_subimages(img, "")
+        return fig
+
     def on_show_msa_mat(self, force: bool = False):
         """Controller is ordered to fetch an MSA matrix visualization figure and forward it to the GUI."""
         if not self.is_mat_initialized(): return
         if not force and not self.msa_changed: return
 
-        mat = self.msa.get_mat(self.hide_empty_cols, self.reorder_rows)
-        if mat is not None:
-            wh_ratio = self.gui.get_mat_frame_wh_ratio()
-            img = mat
-            if self.colour_clusters:
-                # TODO: consider mat vs. dendro ordering!
-                cluster_labels = self.msa.get_cluster_labels(self.dendro_hcutoff, self.reorder_rows)
-                img = color_clusters(mat, cluster_labels)
-            img = highlight_row(img, self.get_selseq_idx())
-            if self.split_mat_visualization:
-                img = create_resized_mat_visualization(img, wh_ratio, not self.colour_clusters)
-            fig = show_as_subimages(img, "")
+        fig = self.get_msa_figure()
+        if fig is not None:
             self.gui.show_matrix(fig)
             self.msa_changed = False
 
@@ -205,7 +190,7 @@ class Controller:
         if not self.domains_changed: return
 
         self.gui.add_to_textbox("Calculating domains.")
-        domains = self.msa.retrieve_domains(self.dendro_hcutoff)
+        domains = self.msa.retrieve_domains_via_dendrogram(self.dendro_hcutoff)
         fig = visualize_domains(domains)
         self.gui.show_domains(fig)
         self.domains_changed = False
@@ -218,3 +203,22 @@ class Controller:
 
     def is_mat_initialized(self):
         return self.msa is not None and self.msa.initialized
+
+    # --- save
+
+    def on_save(self, tight=True):
+        msa_fig = self.get_msa_figure(split_mat=False)
+        if tight:
+            msa_fig.get_axes()[0].set_ylabel("")
+            msa_fig.get_axes()[0].set_xlabel("")
+        fname = "msa"
+        if self.hide_empty_cols:
+            fname += "_gapless"
+        if self.reorder_rows:
+            fname += "_reordered"
+        if self.colour_clusters:
+            fname += "_colored"
+        if tight:
+            msa_fig.savefig(f'out/{fname}.png', bbox_inches='tight', pad_inches=0, dpi='figure')
+        else:
+            msa_fig.savefig(f'out/{fname}.png', bbox_inches='tight', dpi='figure')

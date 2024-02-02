@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 
 import msapp.gconst as gc
-from msapp.view.visualization import show_pre_post
 
 
 # ----------------- mat manipulation and plotting preparation
@@ -11,7 +10,7 @@ from msapp.view.visualization import show_pre_post
 def filter_by_reference(mat, idx: int) -> np.array:
     """Filters the alignment matrix by a given row in that MSA for visualization purposes."""
     if idx >= mat.shape[0]: raise ValueError("The index needs to be smaller than the number of rows.")
-    if gc.VERBOSE: print(f"\n-- OP: Filter by reference with index {idx}")
+    if gc.VERBOSE: print(f"-- OP: Filter by reference with index {idx}")
 
     refseq = mat[idx]
     cols_to_remove = np.array([i for i, val in enumerate(refseq) if val == 1])
@@ -21,10 +20,10 @@ def filter_by_reference(mat, idx: int) -> np.array:
 
 def remove_empty_cols(mat) -> np.array:
     """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
-    if gc.VERBOSE: print("\n-- OP: Removing empty columns.")
     empty_columns = np.where(np.all(mat == 1, axis=0))[0]
     filtered = remove_seqs_from_alignment(mat, empty_columns, cols=True)
-    if gc.VERBOSE: print(f"Removed {len(empty_columns)} empty columns")
+    if gc.VERBOSE and empty_columns > 0:
+        print(f"Removed {len(empty_columns)} empty columns")
     return filtered
 
 
@@ -60,60 +59,49 @@ def sort_by_metric(mat, sorting_metric=lambda row: sum(row)) -> np.array:
 
 # ----------------- classic image processing, mainly convolution
 
-def blur(img: np.array, ksize=9, show=None) -> np.array:
+def blur(img: np.array, ksize=9) -> np.array:
     """Blur image."""
-    print(f"\n-- OP: Blur ({ksize}x{ksize} kernel)")
-    show = show if show is not None else gc.DISPLAY
+    if gc.VERBOSE: print(f"-- OP: Blur ({ksize}x{ksize} kernel)")
     processed = cv2.blur(img, (ksize, ksize))
     processed = to_binary_matrix(processed)
-    if show: show_pre_post(img, processed, f"Blurring, {ksize}x{ksize} kernel")
     return processed
 
 
-def gaussian_blur(img: np.array, ksize=5, show=None) -> np.array:
+def gaussian_blur(img: np.array, ksize=5) -> np.array:
     """Gaussian blur image."""
-    print(f"\n-- OP: Gaussian blur ({ksize}x{ksize} kernel)")
-    show = show if show is not None else gc.DISPLAY
+    if gc.VERBOSE: print(f"-- OP: Gaussian blur ({ksize}x{ksize} kernel)")
     processed = cv2.GaussianBlur(img, (ksize, ksize), cv2.BORDER_DEFAULT)
     processed = to_binary_matrix(processed)
-    if show: show_pre_post(img, processed, f"Gaussian Blur, {ksize}x{ksize} kernel")
     return processed
 
 
-def median_blur(img: np.array, ksize=5, show=None) -> np.array:
+def median_blur(img: np.array, ksize=5) -> np.array:
     """Median blur image."""
-    print(f"\n-- OP: Median blur ({ksize}x{ksize} kernel)")
-    show = show if show is not None else gc.DISPLAY
+    if gc.VERBOSE: print(f"-- OP: Median blur ({ksize}x{ksize} kernel)")
     processed = cv2.medianBlur(img, ksize)
     processed = to_binary_matrix(processed)
-    if show: show_pre_post(img, processed, f"Median Blur, {ksize}x{ksize} kernel")
     return processed
 
 
-def dilate_erode(img: np.array, ksize=5, show=None) -> np.array:
+def dilate_erode(img: np.array, ksize=5) -> np.array:
     """Dilate, then erode image."""
-    print(f"\n-- OP: Dilate/erode ({ksize}x{ksize} kernel)")
-    show = show if show is not None else gc.DISPLAY
+    if gc.VERBOSE: print(f"-- OP: Dilate/erode ({ksize}x{ksize} kernel)")
     kernel = np.ones((ksize, ksize), np.uint8)
     processed = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
     processed = to_binary_matrix(processed)
-    if show: show_pre_post(img, processed, f"Morphing (Dilate, then Erode), {ksize}x{ksize} kernel")
     return processed
 
 
-def cross_convolve(img: np.array, row_size: int = 1, col_size: int = 3, show=None) -> np.array:
+def cross_convolve(img: np.array, row_size: int = 1, col_size: int = 3) -> np.array:
     """Convolves with a cross-shaped kernel with row_size ones on the center row and col_size 1s on the center
     column."""
     ksize = max(row_size, col_size)
-    print(f"\n-- OP: Convolving with {ksize}x{ksize} cross-kernel (r:{row_size}, c:{col_size})")
+    if gc.VERBOSE: print(f"-- OP: Convolving with {ksize}x{ksize} cross-kernel (r:{row_size}, c:{col_size})")
 
     kernel = create_cross_kernel(row_size=row_size, col_size=col_size)
     processed = cv2.filter2D(src=img, ddepth=-1, kernel=kernel)
     processed = to_binary_matrix(processed)
 
-    if show if show is not None else gc.DISPLAY:
-        show_pre_post(img, processed,
-                      f"Convolving with {ksize}x{ksize} cross-kernel (1s on row:{row_size}, on col:{col_size})")
     return processed
 
 
@@ -126,7 +114,6 @@ def create_cross_kernel(row_size: int = 1, col_size: int = 3) -> np.array:
     if row_size % 2 == 0 or col_size % 2 == 0:
         raise ValueError("Kernel size must be an odd number.")
 
-    if gc.VERBOSE: print(f"Cross kernel with row size: {row_size}, col size: {col_size}")
     ksize = max(col_size, row_size)
     kernel = np.zeros((ksize, ksize), dtype=int)
 
@@ -154,18 +141,14 @@ def to_binary_matrix(img: np.array) -> np.array:
     mat = copy.deepcopy(img)
     minval = np.min(mat)
     if minval < 0:
-        print(f"Min matrix entry: {minval} < 0!")
         mat = mat - minval
 
     maxval = np.max(mat)
     if maxval <= 0:
-        print(f"Max matrix entry {maxval} <= 0!")
-    elif maxval != 1:
+        raise ValueError(f"Max matrix entry {maxval} <= 0!")
+    if maxval != 1:
         mat = mat / maxval
     mat = np.round(mat)
     mat = np.array(mat, dtype=np.uint8)
-
-    if gc.VERBOSE:
-        print(f"After mat binarization, min: {np.min(mat)}, max: {np.max(mat)}")
 
     return mat

@@ -68,11 +68,14 @@ def show_as_one(mat, title: str) -> Figure:
 
 
 def show_as_subimages(mat, title: str) -> Figure:
-    """Shows the alignmet as a binary image split over several rows. Expects a subimaged mat to be passed in."""
+    """Shows the alignment as a binary image split over several rows. Expects a subimaged mat to be passed in."""
     # scale down image: otherwise too large to properly display. mainly a cv2 problem
     # concat_img = cv2.resize(concat_img, (concat_img.shape[1] // 2, concat_img.shape[0] // 2))
+    height = len(mat)
+    width = len(mat[0])
 
-    figure = plt.figure(figsize=(8, 8))
+    # figure = plt.figure(figsize=(8, 8))
+    figure = plt.figure(figsize=(width/100, height/100))
     figure.subplots()
     plt.imshow(mat, cmap="gray")
     plt.xticks([]), plt.yticks([])
@@ -270,7 +273,7 @@ def visualize_dendrogram(linkage_mat, dheight: float = 0.75) -> Figure:
     dendrogram(linkage_mat, ax=ax, color_threshold=dheight, above_threshold_color='#ccc9ca')
     plt.axhline(y=dheight, linestyle='--', color='gray', label='Desired Clusters')
 
-    y = [0, 0.5*maxval, 1*maxval]
+    y = [0, 0.5 * maxval, 1 * maxval]
     ylabels = ['0.0', '0.5', '1.0']
     ax.set_yticks(y, labels=ylabels)
     plt.xticks([])
@@ -306,12 +309,15 @@ def create_dendrogram_height_cluster_count_plot(linkage_mat, dheight: float = 0.
 
 def visualize_domains(domains_lists: np.array) -> Figure:
     """Gets a list of lists of tuples with start and end values between 0 and 10 (domains)."""
+    msalen = max((t[1] for sublist in domains_lists for t in sublist), default=None)
     num_lines = len(domains_lists)
     image_width = 10
     image_height = num_lines
     fig, ax = plt.subplots(figsize=(image_width, image_height))
     ax.set_xlim(0, image_width)
     ax.set_ylim(0, image_height)
+
+    normalization_factor = 10.0 / float(msalen)
 
     # Draw horizontal lines with filled vertical rectangles
     line_height = 0.8
@@ -320,13 +326,16 @@ def visualize_domains(domains_lists: np.array) -> Figure:
         line_y = i + 0.5
         ax.hlines(line_y, 0, image_width, color=line_color, linewidth=2)
         for domain in cluster:
+            start = domain[0] * normalization_factor
+            end = domain[1] * normalization_factor
             ax.fill_betweenx(y=[line_y - line_height / 2, line_y + line_height / 2],
-                             x1=domain[0], x2=domain[1], color=line_color)
+                             x1=start, x2=end, color=line_color)
 
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_xticklabels([])
     ax.set_yticklabels([])
+    if gc.DISPLAY: plt.show()
     return fig
 
 
@@ -352,3 +361,9 @@ def imgsave(img, filename="proteoform-img") -> None:
     # plt.set_tight_layout(True)
     fig.savefig(f"out/{filename}.png", bbox_inches='tight')
     plt.close(fig)
+
+def save_figure(fig, filename, pad=True) -> None:
+    if pad:
+        fig.savefig(f'out/{filename}.png', bbox_inches='tight', dpi='figure')
+    else:
+        fig.savefig(f'out/{filename}.png', bbox_inches='tight', pad_inches=0, dpi='figure')

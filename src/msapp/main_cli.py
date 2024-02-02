@@ -1,10 +1,12 @@
 import argparse
+from datetime import datetime
+import os
 import sys
 
 import msapp.gconst as gc
 from msapp.model.msa import MultiSeqAlignment
-from msapp.model.mat_manipulation import cross_convolve, filter_by_reference, gaussian_blur
-
+from msapp.view.visualization import (color_clusters, save_figure, show, show_as_subimages, visualize_dendrogram,
+                                      visualize_domains)
 
 def parse_command_line(argv) -> argparse.ArgumentParser:
     """Process command line arguments."""
@@ -17,55 +19,86 @@ def parse_command_line(argv) -> argparse.ArgumentParser:
     p.add_argument('-s', '--save', action='store_true', default=False, help='save the results at the end')
     p.add_argument('-r', '--reorder', action='store_true', default=False,
                    help='reorder the rows in an alignment matrix')
-    p.add_argument('-f', '--filter', type=int, default=-1,
-                   help='filter the msa based on the sequence with this index (default: 0)')
-    p.add_argument('-c', '--cut_height_dendrogram', type=float, default=0.5,
+    p.add_argument('-c', '--dcutoff', type=float, default=0.75,
                    help='Dendrogram cut height to determine cluster count (1: root, single cluster; 0: leaves, '
                         'one cluster per distinct sequence)')
+    p.add_argument('-f', '--filter', type=str, default="standard", choices=["mild", "standard", "aggressive"],
+                   help="How aggressively to filter the alignment matrix.")
     args = p.parse_args(argv)
     return args
 
 
 def run() -> None:
-    print("Welcome to the msa proteoform profiler")
+    print("Welcome to the msa proteoform profiler.")
     print("------------------------------------------")
     argv = sys.argv[1:]
     p = parse_command_line(argv)
     gc.DISPLAY = p.display
     gc.VERBOSE = p.verbose
-    if gc.VERBOSE:
-        print("Finished parsing command line arguments")
-        print(f"verbose:{gc.VERBOSE}; display:{gc.DISPLAY}")
+    hide_empty_cols = True
+    reorder_rows = p.reorder
 
-    msa: MultiSeqAlignment = MultiSeqAlignment(p.msafile)
+    if p.dcutoff < 0.0 or p.dcutoff > 1.0:
+        print("ERR: the dendrogram cutoff must be a float value between 0.0 and 1.0. Exiting.")
+        quit()
+
+    print("Settings:")
+    print(f"- Verbose: {gc.VERBOSE}")
+    print(f"- Display: {gc.DISPLAY}")
+    print(f"- Hide empty columns: {hide_empty_cols}")
+    print(f"- Reorder rows: {reorder_rows}")
+    print(f"- Dendrogram cutoff: {p.dcutoff}")
+    print(f"- Filter mode: {p.filter}")
+    print("-------------------------------------------")
+
+    # --- load MSA
+
+    try:
+        msa: MultiSeqAlignment = MultiSeqAlignment(p.msafile)
+        if gc.VERBOSE: print()
+    except Exception as e:
+        print(f"ERR: Failed to load MSA from file '{p.msafile}'. Cause: {str(e)}")
+        print("Exiting.")
+        quit()
 
     # --- remove sequences that are much too long; > 3 sigma
 
-    def sort_by(row):
-        return sum(row)
-
-    msa.filter_by_length_statistic()
-    msa.remove_empty_cols(should_show=gc.DISPLAY)
+    if gc.DISPLAY:
+        show(msa.get_mat(hide_empty_cols, reorder_rows), "MSA after loading")
 
     # --- image processing to remove noise
+    msa.run_filtering_pipeline(filter_type=p.filter)
+    if gc.VERBOSE: print()
 
-    msa.img_process(cross_convolve, col_size=17, row_size=7)
+    if gc.DISPLAY:
+        show(msa.get_mat(hide_empty_cols, reorder_rows), "After image processing")
 
-    col_size = msa.nrows // 10
-    col_size = col_size if col_size % 2 == 1 else col_size + 1
-    msa.img_process(cross_convolve, col_size=col_size, row_size=3)
+    the_dir = f'msapp-{datetime.now():%Y-%m-%d-%H:%M}'
+    if p.save:
+        pdir = f"out/{the_dir}"
+        print(f"Writing to output directory: '{pdir}'")
+        if not os.path.isdir(pdir):
+            os.makedirs(pdir)
 
-    # cleaning step, optional. Loses horizontal fragmentation
-    msa.remove_empty_cols(should_show=gc.DISPLAY)
+    fig_dendro = visualize_dendrogram(msa.get_linkage_mat(), p.dcutoff)
+    if p.save:
+        print("Saving dendrogram...")
+        save_figure(fig_dendro, f"{the_dir}/dendrogram")
 
-    msa.img_process(gaussian_blur)
+    mat = msa.get_mat(hide_empty_cols=True, reorder_rows=True)
+    cluster_labels = msa.get_cluster_labels(perc_threshold=p.dcutoff, dendro_ordered=True)
+    img = color_clusters(mat, cluster_labels)
+    fig_mat = show_as_subimages(img, "")
+    if p.save:
+        print("Saving colored MSA...")
+        save_figure(fig_mat, f"{the_dir}/msa_colored_reordered")
 
-    # --- clustering
+    domains = msa.retrieve_domains_via_dendrogram(p.dcutoff)
+    fig_domains = visualize_domains(domains)
+    fig_domains.get_axes()[0].set_xlabel("Domains")
+    fig_domains.get_axes()[0].set_ylabel("Proteoforms")
+    if p.save:
+        print("Saving domains...\n")
+        save_figure(fig_domains, f"{the_dir}/detected_domains")
 
-    if p.filter > 0:
-        filter_by_reference(msa.get_mat(), p.filter)
-
-    if p.reorder:
-        msa.sort_by_metric(sorting_metric=sort_by)
-
-    if p.save: msa.save_to_file("proteoform-img")
+    print(f"Detected {len(domains)} proteoforms, with {[len(pf) for pf in domains]} domains.")

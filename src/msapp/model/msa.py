@@ -1,6 +1,4 @@
 import copy
-from enum import Enum
-
 import numpy as np
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from scipy.cluster.hierarchy import fcluster, linkage
@@ -8,9 +6,8 @@ from scipy.spatial.distance import pdist
 from scipy.stats import mode
 
 import msapp.gconst as gc
-from msapp.model.mat_manipulation import remove_empty_cols, clear_seqs_in_alignment, sort_by_metric
-from msapp.view.visualization import create_cluster_consensus_visualization, imgsave, show, show_hist, \
-    visualize_clusters
+from msapp.model.mat_manipulation import clear_seqs_in_alignment, cross_convolve, gaussian_blur, remove_empty_cols
+from msapp.view.visualization import imgsave
 
 
 class MultiSeqAlignment:
@@ -45,7 +42,6 @@ class MultiSeqAlignment:
         self._ridx = np.array([i for i in range(self.nrows)])
         self._cidx = np.array([i for i in range(self.ncols)])
         self.initialized = True
-        print(f"Successfully loaded MSA ({self.nrows} sequences of length {self.ncols})")
         return True
 
     def init_from_file(self, filename: str) -> bool:
@@ -64,8 +60,7 @@ class MultiSeqAlignment:
                 if entry_length == -1:
                     entry_length = rlen
                 elif rlen != entry_length:
-                    err_msg = "The fasta sequences are not equally long, this in not a valid alignment file.\n"
-                    print(err_msg)
+                    err_msg = "The fasta sequences are not equally long, this in not a valid alignment file."
                     raise ValueError(err_msg)
 
                 the_row = np.fromiter((0 if letter.isalpha() else 1 for letter in seq), dtype=np.uint8)
@@ -73,8 +68,8 @@ class MultiSeqAlignment:
                     msa_mat = np.vstack((msa_mat, the_row)) if msa_mat.size else the_row
 
         if not msa_mat.size or len(msa_mat) == 0:
-            print("Could not initialize MSA object from the given fasta file.\n")
-            return False
+            err_msg = "Could not initialize MSA object from the given fasta file."
+            raise ValueError(err_msg)
 
         self._filename: str = filename
         self.seq_names = seq_names
@@ -87,10 +82,10 @@ class MultiSeqAlignment:
         self._cidx = np.array([i for i in range(self.ncols)])
         self.initialized = True
 
-        print(f"Successfully loaded MSA ({self.nrows} sequences of length {self.ncols})\n")
-        if gc.VERBOSE: self.print_msa(1)
-        if gc.DISPLAY: self.visualize("Original")
-        self._post_op()
+        if gc.VERBOSE:
+            print(f"Successfully loaded MSA from file '{filename}' (sequences: {self.nrows}, length: {self.ncols})\n")
+            print("First entry:")
+            self.print_msa(1)
         return True
 
     def get_seq_indexer(self):
@@ -100,44 +95,30 @@ class MultiSeqAlignment:
 
     def filter_by_length_statistic(self) -> None:
         """Creates a histogram of sequence lengths, then removes all longer than 3 std deviations above the median."""
-        print("\n-- OP: Filtering by length statistic > 3 sigma.")
+        if gc.VERBOSE: print("-- OP: Filtering by length statistic > 3 sigma.")
 
         seq_lengths = [self.ncols - sum(row) for row in self._mat]
         median = np.median(seq_lengths)
         std = np.std(seq_lengths)
-        if gc.DISPLAY: show_hist(seq_lengths, nbins=100)
+        # if gc.DISPLAY: show_hist(seq_lengths, nbins=100)
 
         over_three_std = median + 3 * std
         seqs_over_three_std = np.array([idx for idx, l in enumerate(seq_lengths) if l > over_three_std])
+        if gc.VERBOSE and len(seqs_over_three_std) > 0:
+            print(f"Removed {len(seqs_over_three_std)} sequences > 3 sigma.")
+
         self._mat = clear_seqs_in_alignment(self._mat, idx_list=seqs_over_three_std)
         self.seq_indexer.indices_dendro_changed()
         self.linkage_mat.mat_changed()
 
-        if gc.DISPLAY: self.visualize(rf"Removed {len(seqs_over_three_std)} seqs > 3 $\sigma$ length")
-        self._post_op()
-
     def remove_isolated_connections(self):
+        if gc.VERBOSE: print("-- OP: Removing isolated connections.")
+
         black_pixels_count = np.sum(self._mat == 0, axis=0)
         columns_to_change = np.where(black_pixels_count <= 1)[0]
+        if gc.VERBOSE and len(columns_to_change) > 0:
+            print(f"Removed {len(columns_to_change)} isolated connections.")
         self._mat[:, columns_to_change] = 1
-
-    def remove_empty_cols(self, should_show: bool = False):
-        """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
-        self._mat = remove_empty_cols(self._mat)
-        self.nrows = self._mat.shape[0]
-        self.ncols = self._mat.shape[1]
-        if should_show: self.visualize(f"Removed empty columns")
-        self._post_op()
-
-    # ------ sort operations
-
-    def sort_by_metric(self, sorting_metric=lambda row: sum(row)) -> None:
-        """Sorts the rows of an MSA binary matrix by the given binary list-comparing sorting function."""
-        print("\n-- OP: sorting MSA rows.")
-        # # TODO: update index lists!
-        self._mat = sort_by_metric(self._mat, sorting_metric)
-        if gc.DISPLAY: self.visualize("Rows sorted")
-        self._post_op()
 
     # ------ image processing
 
@@ -147,7 +128,23 @@ class MultiSeqAlignment:
         self._mat = mat
         self.seq_indexer.indices_dendro_changed()
         self.linkage_mat.mat_changed()
-        self._post_op()
+
+    def run_filtering_pipeline(self, filter_type: str = "standard"):
+        filter_type = "standard" if filter_type not in ["mild", "standard", "aggressive"] else filter_type
+        if gc.VERBOSE: print(f"Running {filter_type} filtering pipeline.")
+
+        self.filter_by_length_statistic()
+        self.remove_isolated_connections()
+        self.img_process(gaussian_blur, ksize=5)
+
+        if filter_type.lower() == "standard" or filter_type.lower() == "aggressive":
+            self.img_process(cross_convolve, col_size=5)
+            self.img_process(cross_convolve, row_size=7, col_size=17)
+
+        if filter_type.lower() == "aggressive":
+            vsize = self.nrows // 10
+            vsize = vsize if vsize % 2 == 1 else vsize + 1
+            self.img_process(cross_convolve, col_size=vsize, row_size=3)
 
     # ------ cluster operations, constructs implicit phylogenetic tree
 
@@ -165,10 +162,10 @@ class MultiSeqAlignment:
             cluster_labels = [cluster_labels[i] for i in indices_dendro]
         return cluster_labels
 
-    def retrieve_domains(self, perc_threshold: float = 0.75) -> np.array:
+    def retrieve_domains_via_dendrogram(self, perc_threshold: float = 0.75):
         """Calculates and returns domains that are recognizable in the MSA.
-        Returns a list of lists, where each list corresponds to a cluster and
-        each list contains tuples, one per domain: (start, end) between 0.0 and 10.0."""
+                Returns a list of lists, where each list corresponds to a cluster and
+                each list contains tuples, one per domain: (start, end) between 0.0 and 10.0."""
         cluster_labels = self.get_cluster_labels(perc_threshold)
         nclusters = len(set(cluster_labels))
 
@@ -177,11 +174,12 @@ class MultiSeqAlignment:
         for i in range(nclusters, 0, -1):
             cluster_indices = np.where(cluster_labels == i)[0]
             cluster_sizes.append(len(cluster_indices))
-            cluster_data = self._mat[cluster_indices]
+            #cluster_data = self._mat[cluster_indices]
+            mat = self.get_mat(hide_empty_cols=True)
+            cluster_data = mat[cluster_indices]
             cseq = mode(cluster_data, axis=0).mode
             consensus_list = np.vstack((consensus_list, cseq)) if consensus_list.size else cseq
 
-        if gc.DISPLAY: create_cluster_consensus_visualization(consensus_list)
         if nclusters == 1:
             consensus_list = [consensus_list]
         domains = self.calculate_black_regions(consensus_list)
@@ -190,7 +188,8 @@ class MultiSeqAlignment:
 
     def calculate_black_regions(self, consensus_list):
         black_regions_list = []
-        matrix_width = self.ncols
+        min_dist = self.ncols / 700
+        min_width = 6
 
         for consensus_seq in consensus_list:
             black_regions = []
@@ -201,16 +200,22 @@ class MultiSeqAlignment:
                     if current_start is None:
                         current_start = i
                 elif current_start is not None:
+                    # white found
                     current_end = i - 1
-                    normalized_start = (current_start / matrix_width) * 10
-                    normalized_end = (current_end / matrix_width) * 10
-                    black_regions.append((normalized_start, normalized_end))
+                    merged = False
+                    if len(black_regions) > 0:
+                        prev = black_regions[-1]
+                        if (current_start - prev[1] < min_dist \
+                            or (prev[1] - prev[0] < min_width and current_start - prev[1] < min_dist*2)):
+                            black_regions[-1] = (prev[0], current_end)
+                            merged = True
+                    if not merged:
+                        # if current_end - current_start >= min_width:
+                        black_regions.append((current_start, current_end))
                     current_start = None
             if current_start is not None:
                 current_end = len(consensus_seq) - 1
-                normalized_start = (current_start / matrix_width) * 10
-                normalized_end = (current_end / matrix_width) * 10
-                black_regions.append((normalized_start, normalized_end))
+                black_regions.append((current_start, current_end))
             black_regions_list.append(black_regions)
 
         return black_regions_list
@@ -245,33 +250,7 @@ class MultiSeqAlignment:
         self.cr_score = prod
         return rt, ct
 
-    def _post_op(self) -> None:
-        """Operations to perform at the end of an MSA processing step."""
-        if gc.VERBOSE: self.calc_cr_metric(verbose=True)
-
-    # -------- helper/debug
-
-    def print_msa(self, n) -> None:
-        """Fetches n entries from the MSA file and prints certain values."""
-        if self._filename == "": return
-        if n < 1: return
-        i = 0
-        with open(self._filename) as fh:
-            for entry in SimpleFastaParser(handle=fh):
-                print("info:", entry[0])
-                print("seq:", entry[1])
-                i += 1
-                if i >= n: break
-
-    # -------- output
-
-    def visualize(self, title_addon: str = "") -> None:
-        """Shows a binary image of the alignment."""
-        if not self.initialized or self._mat is None:
-            print("Matrix not initialized; cannot visualize.")
-            return
-        addstr = "" if title_addon == "" else f": {title_addon}"
-        show(self._mat, f"MSA{addstr} (1 seq/row, white=gap)")
+    # -------- getter
 
     def get_mat(self, hide_empty_cols: bool = False, reorder_rows: bool = False) -> np.array:
         """Creates a copy of the matrix, hides empty columns and reorders rows if specified, then returns it."""
@@ -293,9 +272,24 @@ class MultiSeqAlignment:
             dendro_indices = np.argsort(cluster_labels)
             self.seq_indexer.set_indices_dendro(dendro_indices)
 
+    # -------- output
+
+    def print_msa(self, n) -> None:
+        """Fetches n entries from the MSA file and prints certain values."""
+        if self._filename == "": return
+        if n < 1: return
+        i = 0
+        with open(self._filename) as fh:
+            for entry in SimpleFastaParser(handle=fh):
+                print("info:", entry[0])
+                print("seq:", entry[1])
+                i += 1
+                if i >= n: break
+
     def save_to_file(self, filename: str) -> None:
         """Saves the final alignment image as well as the identified proteoform information."""
-        imgsave(self._mat, filename)
+        mat = self.get_mat(hide_empty_cols=True, reorder_rows=True)
+        imgsave(mat, filename)
         print(f"Wrote filtered alignment image to file out/{filename}.png")
         # TODO: save annotated image to file
         # TODO: invent file format and save proteoforms + meta information
@@ -317,13 +311,11 @@ class LinkageMat:
 
     def _update_if_needed(self, mat: np.ndarray, cmethod: str = "complete") -> None:
         if self.dist_mat is None:
-            if gc.VERBOSE: print("Calculating distance matrix")
             self.dist_mat = pdist(mat, metric='hamming')
             self.link_mat = None
 
         if self.link_mat is None or self.link_cmethod != cmethod:
-            if gc.VERBOSE: print("Calculating linkage matrix")
-            self.link_mat = linkage(self.dist_mat, method=cmethod)
+            self.link_mat = linkage(self.dist_mat, method=cmethod, metric="hamming")
             self.link_cmethod = cmethod
 
     def get(self, mat: np.ndarray, cmethod: str):
@@ -399,16 +391,10 @@ class SequenceIndexer:
     def get_seqid_from_matidx(self, idx: int):
         return self.seqid_list[idx]
 
-    def get_seqid_from_dendroidx(self, idx: int):
-        raise NotImplemented
-
     def indices_dendro_changed(self):
         self.indices_dendro = None
 
     # --- getter
-
-    def has_indices_dendro(self):
-        return self.indices_dendro is not None
 
     def get_indices_dendro(self):
         return self.indices_dendro

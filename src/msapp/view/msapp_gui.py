@@ -154,7 +154,7 @@ class App(ctk.CTk):
         self.button_filter_msa.grid(row=0, column=1, padx=(0, 10), pady=(15, 0))
 
         # dendro cutoff spinbox
-        self.dendro_cutoff_spinbox = FloatSpinbox(self.tabview.tab("Global"), width=110, step_size=0.05, minval=0.25,
+        self.dendro_cutoff_spinbox = FloatSpinbox(self.tabview.tab("Global"), width=110, step_size=0.05, minval=0.1,
                                                   maxval=1.0)
         self.dendro_cutoff_spinbox.grid(row=1, column=0, padx=(10, 5), pady=(10, 0), sticky="nw")
         self.button_dendro_hcutoff = ctk.CTkButton(self.tabview.tab("Global"), width=120, text="Use dendro cutoff",
@@ -320,6 +320,7 @@ class App(ctk.CTk):
         msg = "'Save' clicked, but not yet implemented."
         print(msg)
         self.add_to_textbox(msg)
+        self.controller.on_save()
 
     def on_load_file(self):
         filename = filedialog.askopenfilename(title="Select a File",
@@ -347,11 +348,13 @@ class App(ctk.CTk):
         self.controller.on_show_dendrogram()
         self.controller.clear_domains_view()
 
+        #self.sidebar_button_save.configure(state="normal")
         self.button_filter_msa.configure(state="normal")
         self.filter_msa_selector.configure(state="normal")
         self.filter_msa_selector.set("Standard")
         self.button_dendro_hcutoff.configure(state="normal")
         self.dendro_cutoff_spinbox.enable(True)
+        self.button_calc_domains.configure(state="disabled")
         self.seq_count_value.configure(text=self.controller.msa.nrows)
         self.msa_length_value.configure(text=self.controller.msa.ncols)
         self.button_choose_seq.configure(state="normal")
@@ -362,6 +365,9 @@ class App(ctk.CTk):
     def on_filter_msa(self):
         msa_filter_type = self.filter_msa_selector.get()
         self.controller.run_filtering_pipeline(msa_filter_type)
+
+        self.checkbox_hide_empty_cols.select()
+        self.controller.hide_empty_cols = True
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
         # self.controller.on_show_domains()
@@ -451,18 +457,6 @@ class App(ctk.CTk):
         self.canvas_dendro = FigureCanvasTkAgg(dendro_fig, self.dendrogram_display_frame)
         self.canvas_dendro.draw()
         self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
-
-    def show_consensus(self, consensus_fig: Figure):
-        plt.close()
-        ax = consensus_fig.subplots()
-        ax.axis("off")
-        consensus_fig.set_figheight(4)
-        consensus_fig.set_tight_layout(True)
-
-        self.canvas_consensus.get_tk_widget().destroy()
-        self.canvas_consensus = FigureCanvasTkAgg(consensus_fig, self.consensus_frame)
-        self.canvas_consensus.draw()
-        self.canvas_consensus.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
     def show_domains(self, dc_fig: Figure):
         plt.close()

@@ -22,8 +22,6 @@ def remove_empty_cols(mat) -> np.array:
     """Removes all columns that are empty from the matrix, meaning they only contain the value 1."""
     empty_columns = np.where(np.all(mat == 1, axis=0))[0]
     filtered = remove_seqs_from_alignment(mat, empty_columns, cols=True)
-    if gc.VERBOSE and empty_columns > 0:
-        print(f"Removed {len(empty_columns)} empty columns")
     return filtered
 
 

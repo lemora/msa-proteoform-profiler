@@ -116,8 +116,6 @@ class MultiSeqAlignment:
 
         black_pixels_count = np.sum(self._mat == 0, axis=0)
         columns_to_change = np.where(black_pixels_count <= 1)[0]
-        if gc.VERBOSE and len(columns_to_change) > 0:
-            print(f"Removed {len(columns_to_change)} isolated connections.")
         self._mat[:, columns_to_change] = 1
 
     # ------ image processing

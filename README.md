@@ -23,8 +23,7 @@ All package versions are managed by poetry.
 Running
 ---
 
-Install poetry. Create a virtual environment with an appropriate python version (once):
-`poetry env use python3.12`.
+Create a virtual environment with an appropriate python version (once): `poetry env use python3.12`.
 
 Activate the virtual environment: `poetry shell`. Then prepare by installing: `poetry install`.
 

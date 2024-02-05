@@ -1,4 +1,7 @@
+from __future__ import annotations
 import copy
+from typing import Any
+
 import numpy as np
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from scipy.cluster.hierarchy import fcluster, linkage
@@ -30,7 +33,7 @@ class MultiSeqAlignment:
         if filename is not None and filename != "":
             self.init_from_file(filename)
 
-    def init_from_mat(self, binary_mat: np.array):
+    def init_from_mat(self, binary_mat: np.array) -> bool:
         """Initializes a MultiSeqAlignment object with a given binary matrix. Mainly for testing.
         arg binary_mat: two-dimensional np.array with np.uint8 values"""
         if self.initialized: raise ValueError("The MSA object has already been initialized.")
@@ -87,9 +90,6 @@ class MultiSeqAlignment:
             print("First entry:")
             self.print_msa(1)
         return True
-
-    def get_seq_indexer(self):
-        return self.seq_indexer
 
     # ------ filter operations
 
@@ -265,7 +265,10 @@ class MultiSeqAlignment:
             mat = mat[indices_dendro]
         return mat
 
-    def _refresh_dendro_indices(self):
+    def get_seq_indexer(self) -> SequenceIndexer:
+        return self.seq_indexer
+
+    def _refresh_dendro_indices(self) -> None:
         if self.seq_indexer.get_indices_dendro() is None:
             cluster_labels = fcluster(self.get_linkage_mat(), t=0, criterion='distance')
             dendro_indices = np.argsort(cluster_labels)
@@ -304,7 +307,7 @@ class LinkageMat:
         self.link_mat = None
         self.link_cmethod = ""
 
-    def mat_changed(self):
+    def mat_changed(self) -> None:
         self.dist_mat = None
         self.link_mat = None
 
@@ -317,7 +320,7 @@ class LinkageMat:
             self.link_mat = linkage(self.dist_mat, method=cmethod, metric="hamming")
             self.link_cmethod = cmethod
 
-    def get(self, mat: np.ndarray, cmethod: str):
+    def get(self, mat: np.ndarray, cmethod: str) -> Any:
         """Returns the distance matrix for the given mat."""
         self._update_if_needed(mat, cmethod)
         return self.link_mat
@@ -328,10 +331,10 @@ class LinkageMat:
 class SequenceIndexer:
     """Stores a list of sequence names and their order. Provides access methods via index, id and name."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.num_entries = 0
         self.seqid_dict = None  # key: seq_id, value: tuple (text:str, idx_mat:int, idx_dendro:int)
-        self.seqid_list = None
+        self.seqid_list = None  # list of seq IDs (str)
         self.indices_dendro = None
 
     def init(self, id_name_list: np.array) -> None:
@@ -387,20 +390,20 @@ class SequenceIndexer:
 
     # --- index to seq id
 
-    def get_seqid_from_matidx(self, idx: int):
+    def get_seqid_from_matidx(self, idx: int) -> str:
         return self.seqid_list[idx]
 
-    def indices_dendro_changed(self):
+    def indices_dendro_changed(self) -> None:
         self.indices_dendro = None
 
     # --- getter
 
-    def get_indices_dendro(self):
+    def get_indices_dendro(self) -> list:
         return self.indices_dendro
 
     # --- setter
 
-    def set_indices_dendro(self, dendro_indices):
+    def set_indices_dendro(self, dendro_indices) -> None:
         self.indices_dendro = dendro_indices
         for dendro_idx, mat_idx in enumerate(dendro_indices):
             seq_id = self.get_seqid_from_matidx(mat_idx)

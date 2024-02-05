@@ -12,15 +12,12 @@ import msapp.gconst as gc
 # ----------------- general plotting
 
 
-def get_empty_plot():
+def get_empty_plot() -> Figure:
     """Returns an empty plot. Mainly for resetting GUI canvases."""
-    # global empty_plot
-    # if empty_plot is None:
     fig, ax = plt.subplots()
     ax.axis("off")
     plt.xticks([]), plt.yticks([])
-    empty_plot = fig
-    return empty_plot
+    return fig
 
 
 def show_pre_post(pre, post, title: str) -> Figure:
@@ -200,7 +197,7 @@ def color_clusters(mat: np.array, cluster_labels: np.ndarray) -> np.array:
 
 # ----------------- clusterings
 
-def create_cluster_consensus_visualization(seqs: list[list], cluster_sizes: list = None):
+def create_cluster_consensus_visualization(seqs: list[list], cluster_sizes: list = None) -> Figure:
     """Shows the consensus of a number of sequence clusters based on similarity."""
     num_blocks = len(seqs)
     row_len = len(seqs[0])
@@ -335,6 +332,8 @@ def visualize_domains(domains_lists: np.array) -> Figure:
     ax.set_yticks([])
     ax.set_xticklabels([])
     ax.set_yticklabels([])
+    plt.xlabel("Domains")
+    plt.ylabel("Proteoforms")
     if gc.DISPLAY: plt.show()
     return fig
 

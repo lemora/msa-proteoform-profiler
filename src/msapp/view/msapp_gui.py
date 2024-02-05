@@ -13,7 +13,7 @@ ctk.set_default_color_theme("blue")
 class App(ctk.CTk):
     """The MSAPP GUI."""
 
-    def __init__(self, controller):
+    def __init__(self, controller) -> None:
         super().__init__()
         self.controller = controller
 
@@ -27,7 +27,7 @@ class App(ctk.CTk):
         self.minsize(width=1200, height=700)
         self.after(10, self._create_widgets)
 
-    def _create_widgets(self):
+    def _create_widgets(self) -> None:
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure((2, 3), weight=0)
@@ -295,19 +295,19 @@ class App(ctk.CTk):
 
     # ------ general
 
-    def on_closing(self):
+    def on_closing(self) -> None:
         self.quit()
 
-    def on_change_appearance_mode_event(self, new_appearance_mode: str):
+    def on_change_appearance_mode_event(self, new_appearance_mode: str) -> None:
         ctk.set_appearance_mode(new_appearance_mode)
 
-    def on_resizing(self, event):
+    def on_resizing(self, event) -> None:
         if event.widget == self:
             if getattr(self, "_after_id", None):
                 self.after_cancel(self._after_id)
             self._after_id = self.after(500, lambda: self.eval_significant_resize_event())
 
-    def eval_significant_resize_event(self):
+    def eval_significant_resize_event(self) -> None:
         curr_mfratio = self.get_mat_frame_wh_ratio()
         if abs(self.last_mat_frame_hwratio - curr_mfratio) > 0.2:
             self.controller.on_show_msa_mat(force=True),
@@ -316,13 +316,13 @@ class App(ctk.CTk):
 
     # ------ callbacks triggered by user interactions
 
-    def on_save(self):
+    def on_save(self) -> None:
         msg = "'Save' clicked, but not yet implemented."
         print(msg)
         self.add_to_textbox(msg)
         self.controller.on_save()
 
-    def on_load_file(self):
+    def on_load_file(self) -> None:
         filename = filedialog.askopenfilename(title="Select a File",
                                               filetypes=(("fasta files", "*.fa*"), ("all files", "*.*")))
         if len(filename) == 0: return
@@ -362,7 +362,7 @@ class App(ctk.CTk):
         self.seq_slider.configure(state="normal")
         self.seq_slider.configure(to=self.controller.msa.nrows-1)
 
-    def on_filter_msa(self):
+    def on_filter_msa(self) -> None:
         msa_filter_type = self.filter_msa_selector.get()
         self.controller.run_filtering_pipeline(msa_filter_type)
 
@@ -376,38 +376,38 @@ class App(ctk.CTk):
         self.button_calc_domains.configure(state="normal")
         self.domains_label.configure(text="Predicted protein domains")
 
-    def on_calculate_domains(self):
+    def on_calculate_domains(self) -> None:
         domain_calc_mode = self.filter_calc_domains_mode.get()
         self.controller.on_show_domains()
 
     # --- visualization toggles
 
-    def on_split_mat_visualization(self):
+    def on_split_mat_visualization(self) -> None:
         split = self.checkbox_var_split_mat_visualization.get()
         self.controller.toggle_split_mat_visualization(split)
         self.controller.on_show_msa_mat()
 
-    def on_hide_empty_cols_switch(self):
+    def on_hide_empty_cols_switch(self) -> None:
         hide = self.checkbox_var_hide_empty_cols.get()
         self.controller.toggle_hide_empty_cols(hide)
         self.controller.on_show_msa_mat()
 
-    def on_reorder_mat_rows_switch(self):
+    def on_reorder_mat_rows_switch(self) -> None:
         reorder = self.checkbox_var_reorder_mat_rows.get()
         self.controller.toggle_reorder_mat_rows(reorder)
         self.controller.on_show_msa_mat()
 
-    def on_colour_clusters_switch(self):
+    def on_colour_clusters_switch(self) -> None:
         colour = self.checkbox_var_colour_clusters.get()
         self.controller.toggle_colour_clusters(colour)
         self.controller.on_show_msa_mat()
 
-    def on_highlight_selected_seq(self):
+    def on_highlight_selected_seq(self) -> None:
         should_highlight = self.checkbox_var_highlight_selected_seq.get()
         self.controller.toggle_highlight_selected_seq(should_highlight)
         self.controller.on_show_msa_mat()
 
-    def on_dendro_height_change(self):
+    def on_dendro_height_change(self) -> None:
         val = self.dendro_cutoff_spinbox.get()
         highlight_val = self.dendro_cutoff_spinbox.highlight_val
         if highlight_val == val: return
@@ -417,24 +417,24 @@ class App(ctk.CTk):
         self.controller.on_show_dendrogram()
         self.controller.on_show_msa_mat()
 
-    def on_open_search_seq_dialog(self):
+    def on_open_search_seq_dialog(self) -> None:
         SeqSearchDialogue(self, title="Select a Sequence")
 
-    def on_seq_selection(self, seq_id: str):
+    def on_seq_selection(self, seq_id: str) -> None:
         self.controller.on_seq_selection(seq_id)
         self.controller.on_show_msa_mat()
 
-    def set_slider_value(self, val):
+    def set_slider_value(self, val) -> None:
         self.seq_slider.set(val)
 
-    def on_slider_event(self, value):
+    def on_slider_event(self, value) -> None:
         intval = int(value)
         self.controller.select_ith_seqid(intval)
         self.controller.on_show_msa_mat()
 
     # ------ called by controller
 
-    def show_matrix(self, mat_fig: Figure):
+    def show_matrix(self, mat_fig: Figure) -> None:
         plt.close()
         ax = mat_fig.subplots()
         ax.axis("off")
@@ -446,7 +446,7 @@ class App(ctk.CTk):
         self.canvas_mat.draw()
         self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
 
-    def show_dendrogram(self, dendro_fig: Figure):
+    def show_dendrogram(self, dendro_fig: Figure) -> None:
         plt.close()
         ax = dendro_fig.subplots()
         ax.axis("off")
@@ -458,7 +458,7 @@ class App(ctk.CTk):
         self.canvas_dendro.draw()
         self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
-    def show_domains(self, dc_fig: Figure):
+    def show_domains(self, dc_fig: Figure) -> None:
         plt.close()
         ax = dc_fig.subplots()
         ax.axis("off")
@@ -471,22 +471,22 @@ class App(ctk.CTk):
         self.canvas_domain_view.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10),
                                                      sticky="new")
 
-    def add_to_textbox(self, text_to_add: str):
+    def add_to_textbox(self, text_to_add: str) -> None:
         self.textbox.configure(state="normal")
         self.textbox.insert(0.0, f"{text_to_add}\n")
         self.textbox.configure(state="disabled")
 
-    def set_cluster_count(self, cluster_count: int):
+    def set_cluster_count(self, cluster_count: int) -> None:
         self.cluster_count_value.configure(text=cluster_count)
 
-    def set_selected_seq_info(self, info_text: str):
+    def set_selected_seq_info(self, info_text: str) -> None:
         if info_text is None or len(info_text) == 0: return
         self.selected_seq_textfield.configure(state="normal")
         self.selected_seq_textfield.delete(0.0, END)
         self.selected_seq_textfield.insert(0.0, info_text)
         self.selected_seq_textfield.configure(state="disabled")
 
-    def get_mat_frame_wh_ratio(self):
+    def get_mat_frame_wh_ratio(self) -> float:
         """Get the current matrix frame width to height ratio with reduced height (for plot title + x-axis label)."""
         w = self.mat_display_frame._current_width
         h = self.mat_display_frame._current_height - 150
@@ -499,7 +499,7 @@ class App(ctk.CTk):
 class SeqSearchDialogue(ctk.CTkToplevel):
     """Dialogue window for searching/selecting a sequence."""
 
-    def __init__(self, main_window, title: str):
+    def __init__(self, main_window, title: str) -> None:
         super().__init__()
         self.main_window = main_window
         self._title = title
@@ -510,7 +510,7 @@ class SeqSearchDialogue(ctk.CTkToplevel):
         self.after(10, self._create_widgets)
         self.grab_set()
 
-    def _create_widgets(self):
+    def _create_widgets(self) -> None:
         self.geometry(f"{700}x{400}")
         self.minsize(width=400, height=400)
         self.grid_columnconfigure((0, 1), weight=1)
@@ -585,7 +585,7 @@ class SeqSearchDialogue(ctk.CTkToplevel):
             self.main_window.on_seq_selection(seq_id)
         self.on_closing()
 
-    def on_closing(self):
+    def on_closing(self) -> None:
         self.grab_release()
         self.destroy()
 
@@ -596,7 +596,7 @@ class FloatSpinbox(ctk.CTkFrame):
     """Spinbox for float values."""
 
     def __init__(self, *args, width: int = 120, height: int = 32, step_size: Union[int, float] = 0.1,
-                 minval: float = 0.0, maxval: float = 1.0, **kwargs):
+                 minval: float = 0.0, maxval: float = 1.0, **kwargs) -> None:
         super().__init__(*args, width=width, height=height, **kwargs)
 
         self.step_size = step_size
@@ -622,7 +622,7 @@ class FloatSpinbox(ctk.CTkFrame):
 
         self.entry.insert(0, "0.0")
 
-    def on_add_event(self):
+    def on_add_event(self) -> None:
         try:
             currval = round(float(self.entry.get()), 2)
             if currval + self.step_size >= self.maxval:
@@ -633,7 +633,7 @@ class FloatSpinbox(ctk.CTkFrame):
         except ValueError:
             return
 
-    def on_subtract_event(self):
+    def on_subtract_event(self) -> None:
         try:
             currval = round(float(self.entry.get()), 2)
             if currval - self.step_size <= self.minval:
@@ -650,7 +650,7 @@ class FloatSpinbox(ctk.CTkFrame):
         except ValueError:
             return None
 
-    def set(self, value: float):
+    def set(self, value: float) -> None:
         self.entry.configure(state="normal")
         self.entry.delete(0, "end")
         self.entry.insert(0, str(float(value)))
@@ -660,11 +660,11 @@ class FloatSpinbox(ctk.CTkFrame):
             self.entry.configure(text_color="black")
         self.entry.configure(state="disabled")
 
-    def set_highlighted(self, highlight_val: float):
+    def set_highlighted(self, highlight_val: float) -> None:
         self.highlight_val = highlight_val
         self.set(highlight_val)
 
-    def enable(self, enable: float = True):
+    def enable(self, enable: float = True) -> None:
         enable_str = "normal" if enable else "disabled"
         self.add_button.configure(state=enable_str)
         self.subtract_button.configure(state=enable_str)

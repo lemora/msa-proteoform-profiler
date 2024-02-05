@@ -14,7 +14,7 @@ gc.VERBOSE = False
 
 ############### msa metrics: row column changes
 
-def test_should_report_correct_col_row_changes():
+def test_should_report_correct_col_row_changes() -> None:
     """Should return the correct number of average column and average row changes."""
     msa = MultiSeqAlignment()
     mat = np.array([[0, 1, 1],
@@ -32,7 +32,7 @@ def test_should_report_correct_col_row_changes():
 
 ############### mat: sort by metric
 
-def test_msa_should_sort_rows_correctly():
+def test_msa_should_sort_rows_correctly() -> None:
     """Should reorder rows incrementally by the number of 1s they contain."""
     mat = np.array([[0, 1, 1],
                     [1, 1, 1],
@@ -46,7 +46,7 @@ def test_msa_should_sort_rows_correctly():
 
 ############### mat: remove empty cols
 
-def test_should_remove_empty_cols():
+def test_should_remove_empty_cols() -> None:
     """Should remove columns that only contain 1s."""
     mat = np.array([[0, 1, 1],
                     [0, 1, 0],
@@ -58,7 +58,7 @@ def test_should_remove_empty_cols():
     assert_array_equal(result, should_be)
 
 
-def test_should_not_remove_nonempty_cols():
+def test_should_not_remove_nonempty_cols() -> None:
     """Should not remove any columns if there are none that only contain 1s."""
     mat = np.array([[0, 0, 1],
                     [0, 1, 0],
@@ -70,7 +70,7 @@ def test_should_not_remove_nonempty_cols():
 
 ############### mat: filter by reference
 
-def test_filter_by_full_row_should_be_noop():
+def test_filter_by_full_row_should_be_noop() -> None:
     """Should not change the matrix if the row that is filtered by is 0 everywhere."""
     mat = np.array([[0, 1, 1],
                     [1, 1, 1],
@@ -80,7 +80,7 @@ def test_filter_by_full_row_should_be_noop():
     assert_array_equal(result, should_be)
 
 
-def test_should_filter_by_correct_idx():
+def test_should_filter_by_correct_idx() -> None:
     """Should filter by the row values with the given valid index."""
     mat = np.array([[0, 1, 0],
                     [1, 1, 1],
@@ -92,7 +92,7 @@ def test_should_filter_by_correct_idx():
     assert_array_equal(result, should_be)
 
 
-def test_should_throw_exception_when_trying_to_filter_by_bad_idx():
+def test_should_throw_exception_when_trying_to_filter_by_bad_idx() -> None:
     """Should throw a ValueError exception if trying to filter by a bad index."""
     mat = np.array([[0, 1, 1],
                     [1, 1, 1],

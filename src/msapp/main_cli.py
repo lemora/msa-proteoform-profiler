@@ -51,27 +51,29 @@ def run() -> None:
     print(f"- Filter mode: {p.filter}")
     print("-------------------------------------------")
 
-    # --- load MSA
+    # --- attempt to load MSA
 
     try:
         msa: MultiSeqAlignment = MultiSeqAlignment(p.msafile)
-        if gc.VERBOSE: print()
     except Exception as e:
         print(f"ERR: Failed to load MSA from file '{p.msafile}'. Cause: {str(e)}")
         print("Exiting.")
         quit()
 
-    # --- remove sequences that are much too long; > 3 sigma
+    if gc.VERBOSE: print()
 
     if gc.DISPLAY:
         show(msa.get_mat(hide_empty_cols, reorder_rows), "MSA after loading")
 
-    # --- image processing to remove noise
+    # --- run filtering pipeline to remove noise
+
     msa.run_filtering_pipeline(filter_type=p.filter)
     if gc.VERBOSE: print()
 
     if gc.DISPLAY:
         show(msa.get_mat(hide_empty_cols, reorder_rows), "After image processing")
+
+    # --- optionally show/save results
 
     the_dir = f'msapp-{datetime.now():%Y-%m-%d-%H:%M}'
     if p.save:
@@ -95,8 +97,6 @@ def run() -> None:
 
     domains = msa.retrieve_domains_via_dendrogram(p.dcutoff)
     fig_domains = visualize_domains(domains)
-    fig_domains.get_axes()[0].set_xlabel("Domains")
-    fig_domains.get_axes()[0].set_ylabel("Proteoforms")
     if p.save:
         print("Saving domains...\n")
         save_figure(fig_domains, f"{the_dir}/detected_domains")

@@ -25,13 +25,14 @@ class App(ctk.CTk):
         self.title("MSA Proteoform Profiler")
         self.geometry(f"{1400}x{900}")
         self.minsize(width=1200, height=700)
-        self.after(10, self._create_widgets)
 
-    def _create_widgets(self) -> None:
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure((2, 3), weight=0)
         self.grid_rowconfigure((0, 1, 2, 3), weight=1)
+        self.after(10, self._create_widgets)
+
+    def _create_widgets(self) -> None:
 
         # ------ left sidebar frame
 
@@ -52,84 +53,41 @@ class App(ctk.CTk):
                                                              command=self.on_change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
 
-        # ------ CENTRAL VIEW
+        # ------ info frame
 
-        # ------ MAT DISPLAY FRAME (upper middle)
+        self.scrollable_frame = ctk.CTkScrollableFrame(self, label_text="Info")
+        self.scrollable_frame.grid(row=0, rowspan=2, column=3, padx=(20, 20), pady=(37, 0), sticky="nsew")
+        self.scrollable_frame.grid_columnconfigure(0, weight=1)
 
-        self.tabview_mat = ctk.CTkTabview(self)
-        self.tabview_mat.grid(row=0, rowspan=2, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        self.tabview_mat.grid_columnconfigure(0, weight=1)
-        self.tabview_mat.add("MSA")
-        # self.tabview_mat.add("Consensus")
-        self.tabview_mat.tab("MSA").grid_columnconfigure(0, weight=1)
-        self.tabview_mat.tab("MSA").grid_rowconfigure(0, weight=1)
+        # general MSA info section
+        self.info_msa_label = ctk.CTkLabel(self.scrollable_frame, text="General", width=120,
+                                           font=ctk.CTkFont(size=14, weight="bold"), text_color="gray28",
+                                           bg_color="gray90")
+        self.info_msa_label.grid(row=0, column=0, columnspan=3, padx=(5, 5), pady=(5, 5), sticky="ew")
 
-        # ------ mat view
+        self.seq_count_label = ctk.CTkLabel(self.scrollable_frame, text="Sequence count:", font=ctk.CTkFont(size=14),
+                                            text_color="gray")
+        self.seq_count_label.grid(row=1, column=0, padx=(10, 0), pady=(5, 0), sticky="nw")
+        self.seq_count_value = ctk.CTkLabel(self.scrollable_frame, text="", font=ctk.CTkFont(size=14))
+        self.seq_count_value.grid(row=1, column=1, padx=(0, 10), pady=(5, 0), sticky="nw")
 
-        self.mat_display_frame = ctk.CTkFrame(self.tabview_mat.tab("MSA"), fg_color="transparent")
-        self.mat_display_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
-        self.mat_display_frame.grid_columnconfigure(0, weight=1)
-        self.mat_display_frame.grid_rowconfigure(0, weight=1)
-        self.mat_label = ctk.CTkLabel(self.mat_display_frame, text="MSA Matrix", font=ctk.CTkFont(size=15))
-        self.mat_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
+        self.msa_length_label = ctk.CTkLabel(self.scrollable_frame, text="Alignment length:", font=ctk.CTkFont(size=14),
+                                             text_color="gray")
+        self.msa_length_label.grid(row=2, column=0, padx=(10, 0), pady=(5, 0), sticky="nw")
+        self.msa_length_value = ctk.CTkLabel(self.scrollable_frame, text="", font=ctk.CTkFont(size=14))
+        self.msa_length_value.grid(row=2, column=1, padx=(0, 10), pady=(5, 0), sticky="nw")
 
-        fig, ax = plt.subplots()
-        fig.set_tight_layout(True)
-        fig.set_figheight(4)
-        ax.axis("off")
-        self.canvas_mat = FigureCanvasTkAgg(fig, self.mat_display_frame)
-        self.canvas_mat.draw()
-        self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
+        # clustering info section
+        self.info_clustering_label = ctk.CTkLabel(self.scrollable_frame, text="Clustering", width=120,
+                                                  font=ctk.CTkFont(size=14, weight="bold"), text_color="gray28",
+                                                  bg_color="gray90")
+        self.info_clustering_label.grid(row=3, column=0, columnspan=3, padx=(5, 5), pady=(20, 5), sticky="ew")
 
-        # ------ DENDROGRAM DISPLAY FRAME (lower middle)
-
-        self.tabview_dendro = ctk.CTkTabview(self)
-        self.tabview_dendro.grid(row=2, rowspan=2, column=1, padx=(20, 0), pady=(20, 20), sticky="nsew")
-        self.tabview_dendro.grid_columnconfigure(0, weight=1)
-        self.tabview_dendro.add("Dendrogram")
-        self.tabview_dendro.add("Domains")
-        self.tabview_dendro.tab("Dendrogram").grid_columnconfigure(0, weight=1)
-        self.tabview_dendro.tab("Dendrogram").grid_rowconfigure(0, weight=1)
-        self.tabview_dendro.tab("Domains").grid_columnconfigure(0, weight=1)
-        self.tabview_dendro.tab("Domains").grid_rowconfigure(0, weight=1)
-
-        # ------ dendrogram view
-
-        self.dendrogram_display_frame = ctk.CTkFrame(self.tabview_dendro.tab("Dendrogram"), fg_color="transparent")
-        self.dendrogram_display_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
-        self.dendrogram_display_frame.grid_columnconfigure(0, weight=1)
-        self.dendrogram_display_frame.grid_rowconfigure(0, weight=1)
-        self.dendrogram_label = ctk.CTkLabel(self.dendrogram_display_frame, text="Dendrogram",
-                                             font=ctk.CTkFont(size=15))
-        self.dendrogram_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
-
-        fig, ax = plt.subplots()
-        fig.set_tight_layout(True)
-        fig.set_figheight(4)
-        ax.axis("off")
-        self.canvas_dendro = FigureCanvasTkAgg(fig, self.dendrogram_display_frame)
-        self.canvas_dendro.draw()
-        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
-
-        # ------ predicted domains view
-
-        self.domains_frame = ctk.CTkFrame(self.tabview_dendro.tab("Domains"),
-                                          fg_color="transparent")
-        self.domains_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
-        self.domains_frame.grid_columnconfigure(0, weight=1)
-        self.domains_frame.grid_rowconfigure(0, weight=1)
-        self.domains_label = ctk.CTkLabel(self.domains_frame, text="To get domain info, filter first...",
-                                          font=ctk.CTkFont(size=15))
-        self.domains_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
-
-        fig, ax = plt.subplots()
-        fig.set_tight_layout(True)
-        fig.set_figheight(4)
-        ax.axis("off")
-        self.canvas_domain_view = FigureCanvasTkAgg(fig, self.domains_frame)
-        self.canvas_domain_view.draw()
-        self.canvas_domain_view.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10),
-                                                     sticky="nsew")
+        self.cluster_count_label = ctk.CTkLabel(self.scrollable_frame, text="Cluster count:", font=ctk.CTkFont(size=14),
+                                                text_color="gray")
+        self.cluster_count_label.grid(row=4, column=0, padx=(10, 0), pady=(5, 0), sticky="nw")
+        self.cluster_count_value = ctk.CTkLabel(self.scrollable_frame, text="", font=ctk.CTkFont(size=14))
+        self.cluster_count_value.grid(row=4, column=1, padx=(0, 10), pady=(5, 0), sticky="nw")
 
         # ------ options/operations frame
 
@@ -224,42 +182,6 @@ class App(ctk.CTk):
         self.checkbox_highlight_selected_seq.grid(row=5, column=0, columnspan=2, pady=(0, 0), padx=(10, 10),
                                                   sticky="nw")
 
-        # ------ info frame
-
-        self.scrollable_frame = ctk.CTkScrollableFrame(self, label_text="Info")
-        self.scrollable_frame.grid(row=0, rowspan=2, column=3, padx=(20, 20), pady=(37, 0), sticky="nsew")
-        self.scrollable_frame.grid_columnconfigure(0, weight=1)
-
-        # general MSA info section
-        self.info_msa_label = ctk.CTkLabel(self.scrollable_frame, text="General", width=120,
-                                           font=ctk.CTkFont(size=14, weight="bold"), text_color="gray28",
-                                           bg_color="gray90")
-        self.info_msa_label.grid(row=0, column=0, columnspan=3, padx=(5, 5), pady=(5, 5), sticky="ew")
-
-        self.seq_count_label = ctk.CTkLabel(self.scrollable_frame, text="Sequence count:", font=ctk.CTkFont(size=14),
-                                            text_color="gray")
-        self.seq_count_label.grid(row=1, column=0, padx=(10, 0), pady=(5, 0), sticky="nw")
-        self.seq_count_value = ctk.CTkLabel(self.scrollable_frame, text="", font=ctk.CTkFont(size=14))
-        self.seq_count_value.grid(row=1, column=1, padx=(0, 10), pady=(5, 0), sticky="nw")
-
-        self.msa_length_label = ctk.CTkLabel(self.scrollable_frame, text="Alignment length:",
-                                             font=ctk.CTkFont(size=14), text_color="gray")
-        self.msa_length_label.grid(row=2, column=0, padx=(10, 0), pady=(5, 0), sticky="nw")
-        self.msa_length_value = ctk.CTkLabel(self.scrollable_frame, text="", font=ctk.CTkFont(size=14))
-        self.msa_length_value.grid(row=2, column=1, padx=(0, 10), pady=(5, 0), sticky="nw")
-
-        # clustering info section
-        self.info_clustering_label = ctk.CTkLabel(self.scrollable_frame, text="Clustering", width=120,
-                                                  font=ctk.CTkFont(size=14, weight="bold"), text_color="gray28",
-                                                  bg_color="gray90")
-        self.info_clustering_label.grid(row=3, column=0, columnspan=3, padx=(5, 5), pady=(20, 5), sticky="ew")
-
-        self.cluster_count_label = ctk.CTkLabel(self.scrollable_frame, text="Cluster count:",
-                                                font=ctk.CTkFont(size=14), text_color="gray")
-        self.cluster_count_label.grid(row=4, column=0, padx=(10, 0), pady=(5, 0), sticky="nw")
-        self.cluster_count_value = ctk.CTkLabel(self.scrollable_frame, text="", font=ctk.CTkFont(size=14))
-        self.cluster_count_value.grid(row=4, column=1, padx=(0, 10), pady=(5, 0), sticky="nw")
-
         # ------ textbox
 
         self.logging_frame = ctk.CTkFrame(self)
@@ -268,6 +190,85 @@ class App(ctk.CTk):
         self.logging_frame.grid_rowconfigure(0, weight=1)
         self.textbox = ctk.CTkTextbox(self.logging_frame)
         self.textbox.grid(row=0, column=0, columnspan=2, padx=(10, 10), pady=(10, 10), sticky="nsew")
+
+        # ------ CENTRAL VIEW
+
+        # ------ MAT DISPLAY FRAME (upper middle)
+
+        self.tabview_mat = ctk.CTkTabview(self)
+        self.tabview_mat.grid(row=0, rowspan=2, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.tabview_mat.grid_columnconfigure(0, weight=1)
+        self.tabview_mat.add("MSA")
+        # self.tabview_mat.add("Consensus")
+        self.tabview_mat.tab("MSA").grid_columnconfigure(0, weight=1)
+        self.tabview_mat.tab("MSA").grid_rowconfigure(0, weight=1)
+
+        # ------ mat view
+
+        self.mat_display_frame = ctk.CTkFrame(self.tabview_mat.tab("MSA"), fg_color="transparent")
+        self.mat_display_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
+        self.mat_display_frame.grid_columnconfigure(0, weight=1)
+        self.mat_display_frame.grid_rowconfigure(0, weight=1)
+        self.mat_label = ctk.CTkLabel(self.mat_display_frame, text="MSA Matrix", font=ctk.CTkFont(size=15))
+        self.mat_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
+
+        fig, ax = plt.subplots()
+        fig.set_tight_layout(True)
+        fig.set_figheight(4)
+        ax.axis("off")
+        self.canvas_mat = FigureCanvasTkAgg(fig, self.mat_display_frame)
+        self.canvas_mat.draw()
+        self.canvas_mat.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
+
+        # ------ DENDROGRAM DISPLAY FRAME (lower middle)
+
+        self.tabview_dendro = ctk.CTkTabview(self)
+        self.tabview_dendro.grid(row=2, rowspan=2, column=1, padx=(20, 0), pady=(20, 20), sticky="nsew")
+        self.tabview_dendro.grid_columnconfigure(0, weight=1)
+        self.tabview_dendro.add("Dendrogram")
+        self.tabview_dendro.add("Domains")
+        self.tabview_dendro.tab("Dendrogram").grid_columnconfigure(0, weight=1)
+        self.tabview_dendro.tab("Dendrogram").grid_rowconfigure(0, weight=1)
+        self.tabview_dendro.tab("Domains").grid_columnconfigure(0, weight=1)
+        self.tabview_dendro.tab("Domains").grid_rowconfigure(0, weight=1)
+
+        # ------ dendrogram view
+
+        self.dendrogram_display_frame = ctk.CTkFrame(self.tabview_dendro.tab("Dendrogram"), fg_color="transparent")
+        self.dendrogram_display_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
+        self.dendrogram_display_frame.grid_columnconfigure(0, weight=1)
+        self.dendrogram_display_frame.grid_rowconfigure(0, weight=1)
+        self.dendrogram_label = ctk.CTkLabel(self.dendrogram_display_frame, text="Dendrogram",
+                                             font=ctk.CTkFont(size=15))
+        self.dendrogram_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
+
+        fig, ax = plt.subplots()
+        fig.set_tight_layout(True)
+        fig.set_figheight(4)
+        ax.axis("off")
+        self.canvas_dendro = FigureCanvasTkAgg(fig, self.dendrogram_display_frame)
+        self.canvas_dendro.draw()
+        self.canvas_dendro.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
+
+        # ------ predicted domains view
+
+        self.domains_frame = ctk.CTkFrame(self.tabview_dendro.tab("Domains"),
+                                          fg_color="transparent")
+        self.domains_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
+        self.domains_frame.grid_columnconfigure(0, weight=1)
+        self.domains_frame.grid_rowconfigure(0, weight=1)
+        self.domains_label = ctk.CTkLabel(self.domains_frame, text="To get domain info, filter first...",
+                                          font=ctk.CTkFont(size=15))
+        self.domains_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
+
+        fig, ax = plt.subplots()
+        fig.set_tight_layout(True)
+        fig.set_figheight(4)
+        ax.axis("off")
+        self.canvas_domain_view = FigureCanvasTkAgg(fig, self.domains_frame)
+        self.canvas_domain_view.draw()
+        self.canvas_domain_view.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10),
+                                                     sticky="nsew")
 
         # ------ set default values
 

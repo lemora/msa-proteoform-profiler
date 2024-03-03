@@ -45,10 +45,10 @@ def run() -> None:
     print("Settings:")
     print(f"- Verbose: {gc.VERBOSE}")
     print(f"- Display: {gc.DISPLAY}")
-    print(f"- Hide empty columns: {hide_empty_cols}")
     print(f"- Dendrogram cutoff: {p.dcutoff}")
     print(f"- Filter mode: {p.filter}")
     print(f"- Domain calculation: {p.domains}")
+    print(f"- Output directory: {p.out}")
     print("-------------------------------------------")
 
     # --- attempt to load MSA

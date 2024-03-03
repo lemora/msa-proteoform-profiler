@@ -209,7 +209,7 @@ class Controller:
 
     # --- save
 
-    def on_save(self, out_dir="out/") -> None:
+    def on_save(self, out_dir="out") -> None:
         calc_dom_mode = "quick" if self.calc_domain_mode == "" else self.calc_domain_mode
         try:
             show_save_results(self.msa, self.dendro_hcutoff, calc_dom_mode, save=True, out_dir=out_dir)

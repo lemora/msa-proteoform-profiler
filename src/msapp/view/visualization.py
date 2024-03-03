@@ -3,6 +3,7 @@ import math
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 import numpy as np
+import os
 from scipy.cluster.hierarchy import dendrogram, fcluster
 import seaborn as sns
 
@@ -362,7 +363,8 @@ def imgsave(img, filename="proteoform-img") -> None:
 
 
 def save_figure(fig, filename, dirname, pad=True) -> None:
-    fname = f"{dirname}/{filename}.png"
+    filename = f"{filename}.png"
+    fname = os.path.join(dirname, filename)
     if pad:
         fig.savefig(fname, bbox_inches='tight', dpi='figure')
     else:

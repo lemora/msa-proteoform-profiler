@@ -320,9 +320,9 @@ class App(ctk.CTk):
     # ------ callbacks triggered by user interactions
 
     def on_save(self) -> None:
-        if not os.path.isdir("out/"):
-            os.makedirs("out/")
-        folder = filedialog.askdirectory(title="Select an output directory", initialdir="out/")
+        if not os.path.isdir("out"):
+            os.makedirs("out")
+        folder = filedialog.askdirectory(title="Select an output directory", initialdir="out")
         self.controller.on_save(folder)
 
     def on_load_file(self) -> None:
@@ -357,6 +357,7 @@ class App(ctk.CTk):
         self.filter_msa_selector.set("Standard")
         self.button_dendro_hcutoff.configure(state="normal")
         self.dendro_cutoff_spinbox.enable(True)
+        self.filter_calc_domains_mode.configure(state="disabled")
         self.button_calc_domains.configure(state="disabled")
         self.seq_count_value.configure(text=self.controller.msa.nrows)
         self.msa_length_value.configure(text=self.controller.msa.ncols)

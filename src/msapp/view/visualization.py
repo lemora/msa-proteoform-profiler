@@ -361,8 +361,10 @@ def imgsave(img, filename="proteoform-img") -> None:
     plt.close(fig)
 
 
-def save_figure(fig, filename, pad=True) -> None:
+def save_figure(fig, filename, dirname, pad=True) -> None:
+    fname = f"{dirname}/{filename}.png"
+    print(f"fname: {fname}")
     if pad:
-        fig.savefig(f'out/{filename}.png', bbox_inches='tight', dpi='figure')
+        fig.savefig(fname, bbox_inches='tight', dpi='figure')
     else:
-        fig.savefig(f'out/{filename}.png', bbox_inches='tight', pad_inches=0, dpi='figure')
+        fig.savefig(fname, bbox_inches='tight', pad_inches=0, dpi='figure')

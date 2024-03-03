@@ -5,6 +5,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from typing import Union
+import os
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -319,10 +320,10 @@ class App(ctk.CTk):
     # ------ callbacks triggered by user interactions
 
     def on_save(self) -> None:
-        # msg = "'Save' clicked, but not yet implemented."
-        # print(msg)
-        # self.add_to_textbox(msg)
-        self.controller.on_save()
+        if not os.path.isdir("out/"):
+            os.makedirs("out/")
+        folder = filedialog.askdirectory(title="Select an output directory", initialdir="out/")
+        self.controller.on_save(folder)
 
     def on_load_file(self) -> None:
         filename = filedialog.askopenfilename(title="Select a File",

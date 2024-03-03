@@ -1,13 +1,10 @@
 import argparse
-from datetime import datetime
-import os
 import sys
 
 import msapp.gconst as gc
 from msapp.model.msa import MultiSeqAlignment
 from msapp.view.out import show_save_results
-from msapp.view.visualization import (color_clusters, save_figure, show, show_as_subimages, visualize_dendrogram,
-                                      visualize_domains)
+from msapp.view.visualization import show
 
 
 def parse_command_line(argv) -> argparse.ArgumentParser:
@@ -26,6 +23,8 @@ def parse_command_line(argv) -> argparse.ArgumentParser:
                    help="How aggressively to filter the alignment matrix.")
     p.add_argument('-m', '--domains', type=str, default="quick", choices=["quick", "thorough"],
                    help="How thoroughly to perform the domains calculation.")
+    p.add_argument('-o', '--out', type=str, default="out",
+                   help="The directory in which to store the results.")
     args = p.parse_args(argv)
     return args
 
@@ -76,4 +75,4 @@ def run() -> None:
 
     # --- optionally show/save results
 
-    show_save_results(msa, p.dcutoff, p.domains, p.save)
+    show_save_results(msa, p.dcutoff, p.domains, p.save, p.out)

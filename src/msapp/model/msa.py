@@ -6,12 +6,10 @@ import numpy as np
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import pdist
-from scipy.stats import mode
 
 import msapp.gconst as gc
 from msapp.model.domains import calculate_domains
 from msapp.model.mat_manipulation import clear_seqs_in_alignment, cross_convolve, gaussian_blur, remove_empty_cols
-from msapp.view.visualization import imgsave
 
 
 class MultiSeqAlignment:
@@ -238,14 +236,6 @@ class MultiSeqAlignment:
                 print("seq:", entry[1])
                 i += 1
                 if i >= n: break
-
-    def save_to_file(self, filename: str) -> None:
-        """Saves the final alignment image as well as the identified proteoform information."""
-        mat = self.get_mat(hide_empty_cols=True, reorder_rows=True)
-        imgsave(mat, filename)
-        print(
-            f"Wrote filtered alignment image to file out/{filename}.png")  # TODO: save annotated image to file  #
-        # TODO: invent file format and save proteoforms + meta information
 
 
 # ------------------------------------------------------------------------

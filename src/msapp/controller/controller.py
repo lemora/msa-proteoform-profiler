@@ -209,7 +209,13 @@ class Controller:
 
     # --- save
 
-    def on_save(self) -> None:
+    def on_save(self, out_dir="out/") -> None:
         calc_dom_mode = "quick" if self.calc_domain_mode == "" else self.calc_domain_mode
-        show_save_results(self.msa, self.dendro_hcutoff, calc_dom_mode, save=True)
-        self.gui.add_to_textbox("Results saved to new folder in 'out/'.")
+        try:
+            show_save_results(self.msa, self.dendro_hcutoff, calc_dom_mode, save=True, out_dir=out_dir)
+        except Exception as e:
+            err_msg = str(e)
+            if len(err_msg) > 0:
+                self.gui.add_to_textbox(f"ERR: {err_msg}")
+            return
+        self.gui.add_to_textbox(f"Results saved to new folder in '{out_dir}'")

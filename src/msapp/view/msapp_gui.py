@@ -319,9 +319,9 @@ class App(ctk.CTk):
     # ------ callbacks triggered by user interactions
 
     def on_save(self) -> None:
-        msg = "'Save' clicked, but not yet implemented."
-        print(msg)
-        self.add_to_textbox(msg)
+        # msg = "'Save' clicked, but not yet implemented."
+        # print(msg)
+        # self.add_to_textbox(msg)
         self.controller.on_save()
 
     def on_load_file(self) -> None:
@@ -350,7 +350,7 @@ class App(ctk.CTk):
         self.controller.on_show_dendrogram()
         self.controller.clear_domains_view()
 
-        #self.sidebar_button_save.configure(state="normal")
+        self.sidebar_button_save.configure(state="disabled")
         self.button_filter_msa.configure(state="normal")
         self.filter_msa_selector.configure(state="normal")
         self.filter_msa_selector.set("Standard")
@@ -372,12 +372,12 @@ class App(ctk.CTk):
         self.controller.hide_empty_cols = True
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
-        # self.controller.on_show_domains()
         self.filter_msa_selector.configure(state="disabled")
         self.button_filter_msa.configure(state="disabled")
         self.filter_calc_domains_mode.configure(state="normal")
         self.button_calc_domains.configure(state="normal")
         self.domains_label.configure(text="Predicted protein domains")
+        self.sidebar_button_save.configure(state="normal")
 
     def on_calculate_domains(self) -> None:
         domain_calc_mode = self.filter_calc_domains_mode.get()

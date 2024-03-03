@@ -3,6 +3,7 @@ from typing import Any
 
 from msapp.model.msa import MultiSeqAlignment
 from msapp.view.msapp_gui import App
+from msapp.view.out import show_save_results
 from msapp.view.visualization import (color_clusters, create_resized_mat_visualization, get_empty_plot, highlight_row,
                                       show_as_subimages, visualize_dendrogram, visualize_domains)
 
@@ -208,19 +209,7 @@ class Controller:
 
     # --- save
 
-    def on_save(self, tight=True) -> None:
-        msa_fig = self.get_msa_figure(split_mat=False)
-        if tight:
-            msa_fig.get_axes()[0].set_ylabel("")
-            msa_fig.get_axes()[0].set_xlabel("")
-        fname = "msa"
-        if self.hide_empty_cols:
-            fname += "_gapless"
-        if self.reorder_rows:
-            fname += "_reordered"
-        if self.colour_clusters:
-            fname += "_colored"
-        if tight:
-            msa_fig.savefig(f'out/{fname}.png', bbox_inches='tight', pad_inches=0, dpi='figure')
-        else:
-            msa_fig.savefig(f'out/{fname}.png', bbox_inches='tight', dpi='figure')
+    def on_save(self) -> None:
+        calc_dom_mode = "quick" if self.calc_domain_mode == "" else self.calc_domain_mode
+        show_save_results(self.msa, self.dendro_hcutoff, calc_dom_mode, save=True)
+        self.gui.add_to_textbox("Results saved to new folder in 'out/'.")

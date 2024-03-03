@@ -5,6 +5,7 @@ import sys
 
 import msapp.gconst as gc
 from msapp.model.msa import MultiSeqAlignment
+from msapp.view.out import show_save_results
 from msapp.view.visualization import (color_clusters, save_figure, show, show_as_subimages, visualize_dendrogram,
                                       visualize_domains)
 
@@ -75,30 +76,4 @@ def run() -> None:
 
     # --- optionally show/save results
 
-    the_dir = f'msapp-{datetime.now():%Y-%m-%d-%H:%M}'
-    if p.save:
-        pdir = f"out/{the_dir}"
-        print(f"Writing to output directory: '{pdir}'")
-        if not os.path.isdir(pdir):
-            os.makedirs(pdir)
-
-    fig_dendro = visualize_dendrogram(msa.get_linkage_mat(), p.dcutoff)
-    if p.save:
-        print("Saving dendrogram...")
-        save_figure(fig_dendro, f"{the_dir}/dendrogram")
-
-    mat = msa.get_mat(hide_empty_cols=True, reorder_rows=True)
-    cluster_labels = msa.get_cluster_labels(perc_threshold=p.dcutoff, dendro_ordered=True)
-    img = color_clusters(mat, cluster_labels)
-    fig_mat = show_as_subimages(img, "MSA: Filtered, Reordered and Colored by Dendrogram")
-    if p.save:
-        print("Saving colored MSA...")
-        save_figure(fig_mat, f"{the_dir}/msa_colored_reordered")
-
-    domains = msa.calculate_domains(p.dcutoff, p.domains)
-    fig_domains = visualize_domains(domains)
-    if p.save:
-        print("Saving domains...\n")
-        save_figure(fig_domains, f"{the_dir}/detected_domains")
-
-    print(f"Detected {len(domains)} proteoforms, with {[len(pf) for pf in domains]} domains.")
+    show_save_results(msa, p.dcutoff, p.domains, p.save)

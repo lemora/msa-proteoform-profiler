@@ -152,7 +152,7 @@ class MultiSeqAlignment:
         """Returns a linkage matrix created by means of the given distance metric."""
         return self.linkage_mat.get(self._mat, cmethod)
 
-    def get_cluster_labels(self, perc_threshold: float = 0.75, dendro_ordered = False):
+    def get_cluster_labels(self, perc_threshold: float = 0.75, dendro_ordered=False):
         linkage_mat = self.get_linkage_mat()
         max_val = max(linkage_mat[:, 2])
         dist_threshold = perc_threshold * max_val
@@ -243,8 +243,8 @@ class MultiSeqAlignment:
         """Saves the final alignment image as well as the identified proteoform information."""
         mat = self.get_mat(hide_empty_cols=True, reorder_rows=True)
         imgsave(mat, filename)
-        print(f"Wrote filtered alignment image to file out/{filename}.png")
-        # TODO: save annotated image to file
+        print(
+            f"Wrote filtered alignment image to file out/{filename}.png")  # TODO: save annotated image to file  #
         # TODO: invent file format and save proteoforms + meta information
 
 

@@ -8,6 +8,7 @@ from msapp.model.msa import MultiSeqAlignment
 from msapp.view.visualization import (color_clusters, save_figure, show, show_as_subimages, visualize_dendrogram,
                                       visualize_domains)
 
+
 def parse_command_line(argv) -> argparse.ArgumentParser:
     """Process command line arguments."""
     p = argparse.ArgumentParser()
@@ -17,13 +18,13 @@ def parse_command_line(argv) -> argparse.ArgumentParser:
     p.add_argument('-d', '--display', action='store_true', default=False,
                    help='display the visualized intermediate results')
     p.add_argument('-s', '--save', action='store_true', default=False, help='save the results at the end')
-    p.add_argument('-r', '--reorder', action='store_true', default=False,
-                   help='reorder the rows in an alignment matrix')
     p.add_argument('-c', '--dcutoff', type=float, default=0.75,
                    help='Dendrogram cut height to determine cluster count (1: root, single cluster; 0: leaves, '
                         'one cluster per distinct sequence)')
     p.add_argument('-f', '--filter', type=str, default="standard", choices=["mild", "standard", "aggressive"],
                    help="How aggressively to filter the alignment matrix.")
+    p.add_argument('-m', '--domains', type=str, default="quick", choices=["quick", "thorough"],
+                   help="How thoroughly to perform the domains calculation.")
     args = p.parse_args(argv)
     return args
 
@@ -36,7 +37,6 @@ def run() -> None:
     gc.DISPLAY = p.display
     gc.VERBOSE = p.verbose
     hide_empty_cols = True
-    reorder_rows = p.reorder
 
     if p.dcutoff < 0.0 or p.dcutoff > 1.0:
         print("ERR: the dendrogram cutoff must be a float value between 0.0 and 1.0. Exiting.")
@@ -46,9 +46,9 @@ def run() -> None:
     print(f"- Verbose: {gc.VERBOSE}")
     print(f"- Display: {gc.DISPLAY}")
     print(f"- Hide empty columns: {hide_empty_cols}")
-    print(f"- Reorder rows: {reorder_rows}")
     print(f"- Dendrogram cutoff: {p.dcutoff}")
     print(f"- Filter mode: {p.filter}")
+    print(f"- Domain calculation: {p.domains}")
     print("-------------------------------------------")
 
     # --- attempt to load MSA
@@ -63,7 +63,7 @@ def run() -> None:
     if gc.VERBOSE: print()
 
     if gc.DISPLAY:
-        show(msa.get_mat(hide_empty_cols, reorder_rows), "MSA after loading")
+        show(msa.get_mat(hide_empty_cols, reorder_rows=False), "Binary MSA After Loading")
 
     # --- run filtering pipeline to remove noise
 
@@ -71,7 +71,7 @@ def run() -> None:
     if gc.VERBOSE: print()
 
     if gc.DISPLAY:
-        show(msa.get_mat(hide_empty_cols, reorder_rows), "After image processing")
+        show(msa.get_mat(hide_empty_cols, reorder_rows=False), "MSA After Image Processing")
 
     # --- optionally show/save results
 
@@ -90,12 +90,12 @@ def run() -> None:
     mat = msa.get_mat(hide_empty_cols=True, reorder_rows=True)
     cluster_labels = msa.get_cluster_labels(perc_threshold=p.dcutoff, dendro_ordered=True)
     img = color_clusters(mat, cluster_labels)
-    fig_mat = show_as_subimages(img, "")
+    fig_mat = show_as_subimages(img, "MSA: Filtered, Reordered and Colored by Dendrogram")
     if p.save:
         print("Saving colored MSA...")
         save_figure(fig_mat, f"{the_dir}/msa_colored_reordered")
 
-    domains = msa.retrieve_domains_via_dendrogram(p.dcutoff)
+    domains = msa.calculate_domains(p.dcutoff, p.domains)
     fig_domains = visualize_domains(domains)
     if p.save:
         print("Saving domains...\n")

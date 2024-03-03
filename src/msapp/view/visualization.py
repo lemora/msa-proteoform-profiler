@@ -55,9 +55,8 @@ def show(msa_mat, title: str, splits: int = -1) -> Figure:
 def show_as_one(mat, title: str) -> Figure:
     """Shows the alignment as a binary image."""
     img = np.array(mat, dtype=np.uint8) * 255
-    figure = plt.figure(figsize=(8, 8))
-    figure.subplots()
-    plt.imshow(img, cmap="gray"), plt.title(f"{title} [{mat.shape[0]}x{mat.shape[1]}]")
+    figure, ax = plt.subplots(figsize=(8, 8), num=f"{title} [{mat.shape[0]}x{mat.shape[1]}]")
+    plt.imshow(img, cmap="gray")
     plt.xlabel("Position in aligned sequence")
     plt.ylabel("Sequence number")
     if gc.DISPLAY: plt.show()
@@ -72,11 +71,11 @@ def show_as_subimages(mat, title: str) -> Figure:
     width = len(mat[0])
 
     # figure = plt.figure(figsize=(8, 8))
-    figure = plt.figure(figsize=(width/100, height/100))
-    figure.subplots()
+    figure, ax = plt.subplots(figsize=(width / 100, height / 100), num=title)
+    # figure.subplots(num=title)
     plt.imshow(mat, cmap="gray")
     plt.xticks([]), plt.yticks([])
-    plt.xlabel(title if title != "" else "Position in aligned sequence")
+    plt.xlabel("Position in aligned sequence")
     plt.ylabel("Sequence number")
 
     if gc.DISPLAY: plt.show()
@@ -165,7 +164,8 @@ def highlight_row(imgmat: np.array, row_idx: int) -> np.array:
     black_highlight = (0, 89, 178)  # blue
     if 0 <= row_idx < height:
         # colored_row = np.array([white_highlight if (i == 255).all() else black_highlight for i in the_row])
-        colored_row = np.where((np.all(imgmat[row_idx] == [255, 255, 255], axis=1)[:, None]), white_highlight, black_highlight)
+        colored_row = np.where((np.all(imgmat[row_idx] == [255, 255, 255], axis=1)[:, None]), white_highlight,
+                               black_highlight)
         imgmat[row_idx] = colored_row
 
     return imgmat
@@ -262,11 +262,11 @@ def visualize_dendrogram(linkage_mat, dheight: float = 0.75) -> Figure:
     that start below a certain significant height (0<=dheight<=1) + adds a horizontal line for clarity."""
     if dheight < 0.0 or dheight > 1.0:
         raise ValueError("The dendrogram height at which to color differently needs to be between 0 and 1.")
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(num="Sequence Similarity Dendrogram")
     maxval = max(linkage_mat[:, 2])
     dheight = dheight * maxval
     for i in np.arange(0.25, 1.25, 0.25):
-        plt.axhline(y=i*maxval, color='#f4f4f4')
+        plt.axhline(y=i * maxval, color='#f4f4f4')
     dendrogram(linkage_mat, ax=ax, color_threshold=dheight, above_threshold_color='#ccc9ca')
     plt.axhline(y=dheight, linestyle='--', color='gray', label='Desired Clusters')
 
@@ -310,7 +310,7 @@ def visualize_domains(domains_lists: np.array) -> Figure:
     num_lines = len(domains_lists)
     image_width = 10
     image_height = num_lines
-    fig, ax = plt.subplots(figsize=(image_width, image_height))
+    fig, ax = plt.subplots(figsize=(image_width, image_height), num="Calculated Domains")
     ax.set_xlim(0, image_width)
     ax.set_ylim(0, image_height)
 
@@ -325,8 +325,7 @@ def visualize_domains(domains_lists: np.array) -> Figure:
         for domain in cluster:
             start = domain[0] * normalization_factor
             end = domain[1] * normalization_factor
-            ax.fill_betweenx(y=[line_y - line_height / 2, line_y + line_height / 2],
-                             x1=start, x2=end, color=line_color)
+            ax.fill_betweenx(y=[line_y - line_height / 2, line_y + line_height / 2], x1=start, x2=end, color=line_color)
 
     ax.set_xticks([])
     ax.set_yticks([])
@@ -360,6 +359,7 @@ def imgsave(img, filename="proteoform-img") -> None:
     # plt.set_tight_layout(True)
     fig.savefig(f"out/{filename}.png", bbox_inches='tight')
     plt.close(fig)
+
 
 def save_figure(fig, filename, pad=True) -> None:
     if pad:

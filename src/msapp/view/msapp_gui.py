@@ -122,7 +122,7 @@ class App(ctk.CTk):
         # domains calculation
         self.filter_calc_domains_mode = ctk.CTkOptionMenu(self.tabview.tab("Global"), width=110, dynamic_resizing=False,
                                                      values=["Quick", "Thorough"])
-        self.filter_calc_domains_mode.grid(row=2, column=0, padx=(10, 5), pady=(15, 0), sticky="nw")
+        self.filter_calc_domains_mode.grid(row=2, column=0, padx=(10, 5), pady=(10, 0), sticky="nw")
         self.button_calc_domains = ctk.CTkButton(self.tabview.tab("Global"), width=120, text="Calc domains",
                                                command=self.on_calculate_domains)
         self.button_calc_domains.grid(row=2, column=1, padx=(0, 10), pady=(10, 0))
@@ -284,6 +284,7 @@ class App(ctk.CTk):
         self.dendro_cutoff_spinbox.enable(False)
         self.button_dendro_hcutoff.configure(state="disabled")
         self.filter_calc_domains_mode.set("Quick")
+        self.filter_calc_domains_mode.configure(state="disabled")
         self.button_calc_domains.configure(state="disabled")
 
         self.button_choose_seq.configure(state="disabled")
@@ -374,12 +375,13 @@ class App(ctk.CTk):
         # self.controller.on_show_domains()
         self.filter_msa_selector.configure(state="disabled")
         self.button_filter_msa.configure(state="disabled")
+        self.filter_calc_domains_mode.configure(state="normal")
         self.button_calc_domains.configure(state="normal")
         self.domains_label.configure(text="Predicted protein domains")
 
     def on_calculate_domains(self) -> None:
         domain_calc_mode = self.filter_calc_domains_mode.get()
-        self.controller.on_show_domains()
+        self.controller.on_show_domains(domain_calc_mode.lower())
 
     # --- visualization toggles
 

@@ -9,6 +9,7 @@ from scipy.spatial.distance import pdist
 from scipy.stats import mode
 
 import msapp.gconst as gc
+from msapp.model.domains import calculate_domains
 from msapp.model.mat_manipulation import clear_seqs_in_alignment, cross_convolve, gaussian_blur, remove_empty_cols
 from msapp.view.visualization import imgsave
 
@@ -161,63 +162,13 @@ class MultiSeqAlignment:
             cluster_labels = [cluster_labels[i] for i in indices_dendro]
         return cluster_labels
 
-    def retrieve_domains_via_dendrogram(self, perc_threshold: float = 0.75):
+    def calculate_domains(self, perc_threshold: float = 0.75, calc_domain_mode: str = "quick"):
         """Calculates and returns domains that are recognizable in the MSA.
                 Returns a list of lists, where each list corresponds to a cluster and
                 each list contains tuples, one per domain: (start, end) between 0.0 and 10.0."""
+        the_mat = self.get_mat(hide_empty_cols=True)
         cluster_labels = self.get_cluster_labels(perc_threshold)
-        nclusters = len(set(cluster_labels))
-
-        consensus_list = np.array([])
-        cluster_sizes = []
-        for i in range(nclusters, 0, -1):
-            cluster_indices = np.where(cluster_labels == i)[0]
-            cluster_sizes.append(len(cluster_indices))
-            #cluster_data = self._mat[cluster_indices]
-            mat = self.get_mat(hide_empty_cols=True)
-            cluster_data = mat[cluster_indices]
-            cseq = mode(cluster_data, axis=0).mode
-            consensus_list = np.vstack((consensus_list, cseq)) if consensus_list.size else cseq
-
-        if nclusters == 1:
-            consensus_list = [consensus_list]
-        domains = self.calculate_black_regions(consensus_list)
-        # print(f"calculated domains: {domains}")
-        return domains
-
-    def calculate_black_regions(self, consensus_list):
-        black_regions_list = []
-        min_dist = self.ncols / 700
-        min_width = 6
-
-        for consensus_seq in consensus_list:
-            black_regions = []
-            current_start = None
-
-            for i, value in enumerate(consensus_seq):
-                if value == 0:
-                    if current_start is None:
-                        current_start = i
-                elif current_start is not None:
-                    # white found
-                    current_end = i - 1
-                    merged = False
-                    if len(black_regions) > 0:
-                        prev = black_regions[-1]
-                        if (current_start - prev[1] < min_dist \
-                            or (prev[1] - prev[0] < min_width and current_start - prev[1] < min_dist*2)):
-                            black_regions[-1] = (prev[0], current_end)
-                            merged = True
-                    if not merged:
-                        # if current_end - current_start >= min_width:
-                        black_regions.append((current_start, current_end))
-                    current_start = None
-            if current_start is not None:
-                current_end = len(consensus_seq) - 1
-                black_regions.append((current_start, current_end))
-            black_regions_list.append(black_regions)
-
-        return black_regions_list
+        return calculate_domains(the_mat, cluster_labels, calc_domain_mode)
 
     # -------- analysis/metrics
 
@@ -312,12 +263,15 @@ class LinkageMat:
         self.link_mat = None
 
     def _update_if_needed(self, mat: np.ndarray, cmethod: str = "complete") -> None:
+        # usable cmethods: complete, weighted, ward
+        # usable pdist metrics: hamming, jaccard, dice, russellrao, yule
+        dist_metric = "hamming"
         if self.dist_mat is None:
-            self.dist_mat = pdist(mat, metric='hamming')
+            self.dist_mat = pdist(mat, metric=dist_metric)
             self.link_mat = None
 
         if self.link_mat is None or self.link_cmethod != cmethod:
-            self.link_mat = linkage(self.dist_mat, method=cmethod, metric="hamming")
+            self.link_mat = linkage(self.dist_mat, method=cmethod, metric=dist_metric)
             self.link_cmethod = cmethod
 
     def get(self, mat: np.ndarray, cmethod: str) -> Any:
@@ -359,7 +313,6 @@ class SequenceIndexer:
             return None
         info = self.seqid_dict[seq_id]
         return info
-        # return (seq_id, info[0])
 
     # --- seq id to index
 

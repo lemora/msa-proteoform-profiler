@@ -21,6 +21,7 @@ class Controller:
         self.highlight_selected_seq = False
         self.selected_seq = -1
         self.dendro_hcutoff = 0.75
+        self.calc_domain_mode = ""
 
         # dirty flags for visualizations that need to be refreshed
         self.msa_changed = True
@@ -32,7 +33,6 @@ class Controller:
         if self.gui is None:
             self.gui = App(controller=self)
             self.gui.mainloop()
-
 
     # --- configure/trigger state changes
 
@@ -143,10 +143,9 @@ class Controller:
         if self.selected_seq != -1:
             self.msa_changed = True
 
-
     # --- display graphs
 
-    def get_msa_figure(self, split_mat = True) -> Figure:
+    def get_msa_figure(self, split_mat=True) -> Figure:
         mat = self.msa.get_mat(self.hide_empty_cols, self.reorder_rows)
         if mat is None:
             return None
@@ -188,21 +187,21 @@ class Controller:
         empty_plot = get_empty_plot()
         self.gui.show_domains(empty_plot)
 
-    def on_show_domains(self) -> None:
+    def on_show_domains(self, calc_domain_mode: str) -> None:
         if not self.is_mat_initialized(): return
-        if not self.domains_changed: return
+        if not self.domains_changed and self.calc_domain_mode == calc_domain_mode: return
 
-        self.gui.add_to_textbox("Calculating domains.")
-        domains = self.msa.retrieve_domains_via_dendrogram(self.dendro_hcutoff)
+        self.gui.add_to_textbox(f"Calculating domains with mode '{calc_domain_mode}'.")
+        domains = self.msa.calculate_domains(self.dendro_hcutoff, calc_domain_mode)
         fig = visualize_domains(domains)
         self.gui.show_domains(fig)
         self.domains_changed = False
+        self.calc_domain_mode = calc_domain_mode
 
     # --- query state
 
     def get_seq_indexer(self) -> Any:
         return self.msa.get_seq_indexer() if self.is_mat_initialized() else None
-
 
     def is_mat_initialized(self) -> bool:
         return self.msa is not None and self.msa.initialized

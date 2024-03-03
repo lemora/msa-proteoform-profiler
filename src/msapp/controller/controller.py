@@ -213,7 +213,7 @@ class Controller:
         calc_dom_mode = "quick" if self.calc_domain_mode == "" else self.calc_domain_mode
         try:
             show_save_results(self.msa, self.dendro_hcutoff, calc_dom_mode, save=True, out_dir=out_dir)
-        except Exception as e:
+        except PermissionError as e:
             err_msg = str(e)
             if len(err_msg) > 0:
                 self.gui.add_to_textbox(f"ERR: {err_msg}")

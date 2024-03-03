@@ -75,4 +75,11 @@ def run() -> None:
 
     # --- optionally show/save results
 
-    show_save_results(msa, p.dcutoff, p.domains, p.save, p.out)
+    try:
+        gc.VERBOSE = True
+        show_save_results(msa, p.dcutoff, p.domains, p.save, p.out)
+    except PermissionError as e:
+        err_msg = str(e)
+        if len(err_msg) > 0:
+            print(f"ERR: {err_msg}")
+        return

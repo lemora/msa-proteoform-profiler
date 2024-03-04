@@ -5,7 +5,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from msapp.model.mat_manipulation import remove_empty_cols
 
 
-def calculate_domains(mat, cluster_labels: list, mode: str = "Quick") -> list:
+def calculate_domains(mat, cluster_labels: list, mode: str = "Quick", hide_empty_cols=True) -> list:
     """
     From a matrix and a list of labels for each row in that matrix, calculate a consensus for each label value from
     all associated sequences.
@@ -29,37 +29,50 @@ def calculate_domains(mat, cluster_labels: list, mode: str = "Quick") -> list:
         else:
             cseq = create_average_sequence_kmeans(cluster_data)
 
-        cseq = filter_average_sequence(cseq, min_width=3, fuse_threshold=2)
+        cseq = filter_average_sequence(cseq, min_width=6, min_gap_len=3)
         consensus_lists = np.vstack((consensus_lists, cseq)) if consensus_lists.size else cseq
 
     if nclusters == 1:
         consensus_lists = [consensus_lists]
 
-    consensus_lists = remove_empty_cols(consensus_lists)
+    if hide_empty_cols:
+        consensus_lists = remove_empty_cols(consensus_lists)
     return mat_to_tuples(consensus_lists)
 
 
-def filter_average_sequence(seq, min_width: int = 3, fuse_threshold: int = 2):
+def filter_average_sequence(seq, min_width: int = 3, min_gap_len: int = 2):
     """
-    Gets a lost with binary values. Fuses sections that are less than fuse_threshold apart and removed those regions
-    that are smaller than min_width.
+    Gets a list with binary values. Fuses black sections that are less than max_gap apart and removes those black
+    regions that are smaller than min_width.
     """
     filtered_seq = seq.copy()
     black_stretch_length = 0
     white_stretch_length = 0
-    for i in range(len(seq)):
+    slen = len(seq)
+    for i in range(slen):
         if seq[i] == 0:
             black_stretch_length += 1
-            if white_stretch_length <= fuse_threshold:
+            if i == slen - 1 and black_stretch_length < min_width:
+                filtered_seq[i - black_stretch_length:i+1] = 1
+            elif white_stretch_length < min_gap_len and i > white_stretch_length:
                 filtered_seq[i - white_stretch_length:i] = 0
+                black_stretch_length = get_black_region_size_before_idx(filtered_seq, i)
             white_stretch_length = 0
         else:
             white_stretch_length += 1
-            if black_stretch_length <= min_width:
+            if black_stretch_length < min_width:
                 filtered_seq[i - black_stretch_length:i] = 1
             black_stretch_length = 0
     return np.array(filtered_seq)
 
+def get_black_region_size_before_idx(seq, index):
+    count = 0
+    for i in range(index, -1, -1):
+        if seq[i] == 0:
+            count += 1
+        else:
+            break
+    return count
 
 # ----------------- to tuples
 

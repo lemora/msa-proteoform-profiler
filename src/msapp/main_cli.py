@@ -48,7 +48,9 @@ def run() -> None:
     print(f"- Dendrogram cutoff: {p.dcutoff}")
     print(f"- Filter mode: {p.filter}")
     print(f"- Domain calculation: {p.domains}")
-    print(f"- Output directory: {p.out}")
+    print(f"- Save: {p.save}")
+    if p.save:
+        print(f"- Output directory: {p.out}")
     print("-------------------------------------------")
 
     # --- attempt to load MSA

@@ -8,7 +8,7 @@ from msapp.view.visualization import color_clusters, save_figure, show_as_subima
 
 
 def show_save_results(msa, dcutoff: float, dom_calc_mode: str, save: bool = True, out_dir="out"):
-    res_dir = f'msapp-{datetime.now():%Y-%m-%d-%H:%M}'
+    res_dir = f'msapp-{datetime.now():%Y-%m-%d-%H:%M:%S}'
     dir_path = os.path.join(out_dir, res_dir)
     if save:
         try:

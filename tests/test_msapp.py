@@ -6,6 +6,7 @@ import pytest
 import msapp.gconst as gc
 from msapp.model.msa import MultiSeqAlignment
 from msapp.model.mat_manipulation import filter_by_reference, remove_empty_cols, sort_by_metric
+from msapp.model.domains import filter_average_sequence
 
 # ------------------------------
 gc.DISPLAY = False
@@ -100,3 +101,67 @@ def test_should_throw_exception_when_trying_to_filter_by_bad_idx() -> None:
 
     with pytest.raises(ValueError, match=r'The index needs to be smaller than the number of rows.'):
         filter_by_reference(mat, 3)
+
+############### domains
+
+# connecting regions
+
+def test_should_connect_close_black_regions() -> None:
+    before = np.array([0, 0, 0, 1, 0, 0, 1, 1, 0, 0])
+    min_width = 1
+    min_gap_len = 3
+    result = filter_average_sequence(before.copy(), min_width, min_gap_len)
+    should_be = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    assert_array_equal(result, should_be)
+
+def test_should_not_connect_beginning() -> None:
+    before = np.array([1, 1, 0, 0, 0, 0, 0])
+    min_width = 1
+    min_gap_len = 3
+    result = filter_average_sequence(before.copy(), min_width, min_gap_len)
+    should_be = np.array([1, 1, 0, 0, 0, 0, 0])
+    assert_array_equal(result, should_be)
+
+def test_should_not_connect_far_apart_black_regions() -> None:
+    before = np.array([1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0])
+    min_width = 1
+    min_gap_len = 3
+    result = filter_average_sequence(before.copy(), min_width, min_gap_len)
+    should_be = np.array([1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0])
+    assert_array_equal(result, should_be)
+
+# removing regions
+
+def test_should_remove_small_black_regions() -> None:
+    before = np.array([1, 1, 0, 1, 0, 0, 1, 1, 1])
+    min_width = 3
+    min_gap_len = 1
+    result = filter_average_sequence(before.copy(), min_width, min_gap_len)
+    should_be = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1])
+    assert_array_equal(result, should_be)
+
+def test_should_remove_small_black_end_regions() -> None:
+    before = np.array([1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0])
+    min_width = 2
+    min_gap_len = 1
+    result = filter_average_sequence(before.copy(), min_width, min_gap_len)
+    should_be = np.array([1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1])
+    assert_array_equal(result, should_be)
+
+def test_should_keep_large_black_regions() -> None:
+    before = np.array([0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1])
+    min_width = 3
+    min_gap_len = 1
+    result = filter_average_sequence(before.copy(), min_width, min_gap_len)
+    should_be = np.array([0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1])
+    assert_array_equal(result, should_be)
+
+# connecting and removing regions
+
+def test_fuse_keep_remove_black_regions() -> None:
+    before = np.array([0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1])
+    min_width = 3
+    min_gap_len = 3
+    result = filter_average_sequence(before.copy(), min_width, min_gap_len)
+    should_be = np.array([0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1])
+    assert_array_equal(result, should_be)

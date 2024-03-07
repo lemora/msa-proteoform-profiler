@@ -184,10 +184,6 @@ class Controller:
         nclusters = len(set(cluster_labels))
         self.gui.set_cluster_count(nclusters)
 
-    def clear_domains_view(self) -> None:
-        empty_plot = get_empty_plot()
-        self.gui.show_domains(empty_plot)
-
     def on_show_domains(self, calc_domain_mode: str) -> None:
         if not self.is_mat_initialized(): return
         if not self.domains_changed and self.calc_domain_mode == calc_domain_mode: return

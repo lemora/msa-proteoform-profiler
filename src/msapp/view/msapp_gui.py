@@ -122,19 +122,21 @@ class App(ctk.CTk):
 
         # domains calculation
         self.filter_calc_domains_mode = ctk.CTkOptionMenu(self.tabview.tab("Global"), width=110, dynamic_resizing=False,
-                                                     values=["Quick", "Thorough"])
+                                                          values=["Quick", "Thorough"])
         self.filter_calc_domains_mode.grid(row=2, column=0, padx=(10, 5), pady=(10, 0), sticky="nw")
         self.button_calc_domains = ctk.CTkButton(self.tabview.tab("Global"), width=120, text="Calc domains",
-                                               command=self.on_calculate_domains)
+                                                 command=self.on_calculate_domains)
         self.button_calc_domains.grid(row=2, column=1, padx=(0, 10), pady=(10, 0))
 
         # visualization checkboxes
         self.checkbox_var_split_mat_visualization = ctk.BooleanVar()
-        self.checkbox_split_mat_visualization = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Optimize MSA visualization",
-                                                        command=self.on_split_mat_visualization,
-                                                        variable=self.checkbox_var_split_mat_visualization, onvalue=True,
-                                                        offvalue=False)
-        self.checkbox_split_mat_visualization.grid(row=3, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
+        self.checkbox_split_mat_visualization = ctk.CTkCheckBox(self.tabview.tab("Global"),
+                                                                text="Optimize MSA visualization",
+                                                                command=self.on_split_mat_visualization,
+                                                                variable=self.checkbox_var_split_mat_visualization,
+                                                                onvalue=True, offvalue=False)
+        self.checkbox_split_mat_visualization.grid(row=3, column=0, columnspan=2, pady=(10, 0), padx=(10, 10),
+                                                   sticky="nw")
 
         self.checkbox_var_hide_empty_cols = ctk.BooleanVar()
         self.checkbox_hide_empty_cols = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Hide empty columns",
@@ -152,9 +154,9 @@ class App(ctk.CTk):
 
         self.checkbox_var_colour_clusters = ctk.BooleanVar()
         self.checkbox_colour_clusters = ctk.CTkCheckBox(self.tabview.tab("Global"), text="Color clusters",
-                                                         command=self.on_colour_clusters_switch,
-                                                         variable=self.checkbox_var_colour_clusters, onvalue=True,
-                                                         offvalue=False)
+                                                        command=self.on_colour_clusters_switch,
+                                                        variable=self.checkbox_var_colour_clusters, onvalue=True,
+                                                        offvalue=False)
         self.checkbox_colour_clusters.grid(row=6, column=0, columnspan=2, pady=(10, 0), padx=(10, 10), sticky="nw")
 
         # Tab 2: SingleSeq
@@ -227,11 +229,8 @@ class App(ctk.CTk):
         self.tabview_dendro.grid(row=2, rowspan=2, column=1, padx=(20, 0), pady=(20, 20), sticky="nsew")
         self.tabview_dendro.grid_columnconfigure(0, weight=1)
         self.tabview_dendro.add("Dendrogram")
-        self.tabview_dendro.add("Domains")
         self.tabview_dendro.tab("Dendrogram").grid_columnconfigure(0, weight=1)
         self.tabview_dendro.tab("Dendrogram").grid_rowconfigure(0, weight=1)
-        self.tabview_dendro.tab("Domains").grid_columnconfigure(0, weight=1)
-        self.tabview_dendro.tab("Domains").grid_rowconfigure(0, weight=1)
 
         # ------ dendrogram view
 
@@ -253,23 +252,8 @@ class App(ctk.CTk):
 
         # ------ predicted domains view
 
-        self.domains_frame = ctk.CTkFrame(self.tabview_dendro.tab("Domains"),
-                                          fg_color="transparent")
-        self.domains_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
-        self.domains_frame.grid_columnconfigure(0, weight=1)
-        self.domains_frame.grid_rowconfigure(0, weight=1)
-        self.domains_label = ctk.CTkLabel(self.domains_frame, text="To get domain info, filter first...",
-                                          font=ctk.CTkFont(size=15))
-        self.domains_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
-
-        fig, ax = plt.subplots()
-        fig.set_tight_layout(True)
-        fig.set_figheight(4)
-        ax.axis("off")
-        self.canvas_domain_view = FigureCanvasTkAgg(fig, self.domains_frame)
-        self.canvas_domain_view.draw()
-        self.canvas_domain_view.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10),
-                                                     sticky="nsew")
+        # the domains tab is created after filtering
+        self.domains_frame = None
 
         # ------ set default values
 
@@ -295,6 +279,37 @@ class App(ctk.CTk):
 
         self.textbox.configure(state="disabled")
         self.last_mat_frame_hwratio = 0
+
+    # ------ create/destroy domains tab
+
+    def create_domains_tab(self) -> None:
+        self.tabview_dendro.add("Domains")
+        self.tabview_dendro.tab("Domains").grid_columnconfigure(0, weight=1)
+        self.tabview_dendro.tab("Domains").grid_rowconfigure(0, weight=1)
+
+        # ------ predicted domains view
+
+        self.domains_frame = ctk.CTkFrame(self.tabview_dendro.tab("Domains"), fg_color="transparent")
+        self.domains_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
+        self.domains_frame.grid_columnconfigure(0, weight=1)
+        self.domains_frame.grid_rowconfigure(0, weight=1)
+        self.domains_label = ctk.CTkLabel(self.domains_frame, text="Predicted protein domains",
+                                          font=ctk.CTkFont(size=15))
+        self.domains_label.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="n")
+
+        fig, ax = plt.subplots()
+        fig.set_tight_layout(True)
+        fig.set_figheight(4)
+        ax.axis("off")
+        self.canvas_domain_view = FigureCanvasTkAgg(fig, self.domains_frame)
+        self.canvas_domain_view.draw()
+        self.canvas_domain_view.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="nsew")
+
+    def destroy_domains_tab(self) -> None:
+        if self.domains_frame is not None:
+            self.domains_frame.destroy()
+            self.tabview_dendro.delete("Domains")
+            self.domains_frame = None
 
     # ------ general
 
@@ -331,6 +346,7 @@ class App(ctk.CTk):
         if len(filename) == 0: return
         success: bool = self.controller.initialize_from_file(filename)
         if not success: return
+
         # reset selections
         self.dendro_cutoff_spinbox.set_highlighted(0.75)
         self.controller.set_dendro_hcutoff(0.75)
@@ -347,9 +363,9 @@ class App(ctk.CTk):
         self.checkbox_var_colour_clusters.set(False)
         self.controller.toggle_colour_clusters(False)
 
+        self.destroy_domains_tab()
         self.controller.on_show_msa_mat()
         self.controller.on_show_dendrogram()
-        self.controller.clear_domains_view()
 
         self.sidebar_button_save.configure(state="disabled")
         self.button_filter_msa.configure(state="normal")
@@ -364,7 +380,7 @@ class App(ctk.CTk):
         self.button_choose_seq.configure(state="normal")
         self.set_selected_seq_info(" ")
         self.seq_slider.configure(state="normal")
-        self.seq_slider.configure(to=self.controller.msa.nrows-1)
+        self.seq_slider.configure(to=self.controller.msa.nrows - 1)
 
     def on_filter_msa(self) -> None:
         msa_filter_type = self.filter_msa_selector.get()
@@ -378,8 +394,10 @@ class App(ctk.CTk):
         self.button_filter_msa.configure(state="disabled")
         self.filter_calc_domains_mode.configure(state="normal")
         self.button_calc_domains.configure(state="normal")
-        self.domains_label.configure(text="Predicted protein domains")
         self.sidebar_button_save.configure(state="normal")
+
+        self.create_domains_tab()
+        self.controller.on_show_domains("quick")
 
     def on_calculate_domains(self) -> None:
         domain_calc_mode = self.filter_calc_domains_mode.get()
@@ -473,8 +491,7 @@ class App(ctk.CTk):
         self.canvas_domain_view.get_tk_widget().destroy()
         self.canvas_domain_view = FigureCanvasTkAgg(dc_fig, self.domains_frame)
         self.canvas_domain_view.draw()
-        self.canvas_domain_view.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10),
-                                                     sticky="new")
+        self.canvas_domain_view.get_tk_widget().grid(row=0, column=0, padx=(10, 10), pady=(25, 10), sticky="new")
 
     def add_to_textbox(self, text_to_add: str) -> None:
         self.textbox.configure(state="normal")
@@ -527,8 +544,7 @@ class SeqSearchDialogue(ctk.CTkToplevel):
         self._list_box = Listbox(master=self)
         self._list_box.grid(row=1, column=0, columnspan=2, padx=20, pady=20, sticky="nsew")
 
-        self._ok_button = ctk.CTkButton(master=self, width=100, border_width=0, text='Select',
-                                        command=self.on_ok_event)
+        self._ok_button = ctk.CTkButton(master=self, width=100, border_width=0, text='Select', command=self.on_ok_event)
         self._ok_button.grid(row=2, column=0, columnspan=1, padx=(20, 10), pady=(0, 10), sticky="nsew")
 
         self._cancel_button = ctk.CTkButton(master=self, width=100, border_width=0, text='Cancel',
